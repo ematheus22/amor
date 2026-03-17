@@ -10,6 +10,7 @@
 <!-- Firebase via CDN compatível com script normal (não module) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <style>
 :root{
@@ -347,7 +348,8 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db      = firebase.firestore();
+const storage = firebase.storage();
 
 async function loadFromDB() {
   try {
@@ -356,6 +358,12 @@ async function loadFromDB() {
       const d = snap.data();
       if (d.biblioteca && d.biblioteca.length) biblioteca = d.biblioteca;
       if (d.hero) heroData = d.hero;
+      // Carrega fotos salvas no Storage
+      if (d.photos) {
+        Object.keys(d.photos).forEach(idx => {
+          photoStore[idx] = d.photos[idx]; // URL do Storage
+        });
+      }
       applyHeroToDOM();
       renderCards();
       buildCardSelector();
@@ -370,7 +378,14 @@ async function loadFromDB() {
 
 async function saveToDB() {
   try {
-    await db.collection('config').doc('main').set({ biblioteca, hero: heroData });
+    // Salva fotos como URLs (já foram salvas no Storage pelo handlePhoto)
+    const photoURLs = {};
+    Object.keys(photoStore).forEach(k => { photoURLs[k] = photoStore[k]; });
+    await db.collection('config').doc('main').set({
+      biblioteca,
+      hero: heroData,
+      photos: photoURLs
+    });
     console.log('✅ Salvo no Firebase');
   } catch(e) {
     console.warn('⚠️ Erro Firebase save:', e.message);
@@ -409,34 +424,36 @@ let selectedCardIdx = null;
 
 /* ═══════════════════════════════════════════════════
    SPOTIFY EMBED
-   O player do Spotify exige interação do usuário para tocar.
-   Ao abrir a carta (clique = interação), o iframe carrega e
-   o Spotify toca automaticamente via autoplay=1
+   IMPORTANTE: o iframe deve ser criado durante o evento
+   de clique do usuário (não em setTimeout) para que o
+   autoplay seja permitido pelo navegador.
 ═══════════════════════════════════════════════════ */
-function playSpotify(item) {
-  // Atualiza toast
-  document.getElementById('toast-song').textContent = item.song + ' — ' + item.artist;
-  document.getElementById('music-toast').classList.add('show');
-
-  const slot = document.getElementById('modal-embed-slot');
-  if (!slot) return;
-  slot.innerHTML = '';
-
-  // Verifica se é link de faixa válido para embed
+function buildSpotifyEmbed(item) {
   let embedUrl = null;
   try {
     const u = new URL(item.spotify);
     if (u.hostname.includes('spotify.com') && /^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
-      embedUrl = 'https://open.spotify.com/embed' + u.pathname + '?utm_source=generator&autoplay=1&theme=0';
+      embedUrl = 'https://open.spotify.com/embed' + u.pathname
+        + '?utm_source=generator&autoplay=1&theme=0';
     }
   } catch(e) {}
 
-  if (embedUrl) {
-    const wrap = document.createElement('div');
-    wrap.className = 'modal-embed';
-    wrap.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="eager"></iframe>`;
-    slot.appendChild(wrap);
-  }
+  if (!embedUrl) return '';
+
+  return `<div class="modal-embed">
+    <iframe
+      src="${embedUrl}"
+      width="100%" height="80"
+      frameborder="0"
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      allowfullscreen
+    ></iframe>
+  </div>`;
+}
+
+function showToast(item) {
+  document.getElementById('toast-song').textContent = item.song + ' — ' + item.artist;
+  document.getElementById('music-toast').classList.add('show');
 }
 
 function closeToast() { document.getElementById('music-toast').classList.remove('show'); }
@@ -478,13 +495,36 @@ function renderCards() {
 }
 
 /* ═══════════════════════════════════════════════════
-   FOTO
+   FOTO — salva no Firebase Storage e persiste
 ═══════════════════════════════════════════════════ */
 function handlePhoto(e, idx) {
-  const file = e.target.files[0]; if (!file) return;
-  const r = new FileReader();
-  r.onload = ev => { photoStore[idx] = ev.target.result; renderCards(); };
-  r.readAsDataURL(file);
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Mostra preview local imediatamente
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoStore[idx] = ev.target.result;
+    renderCards();
+  };
+  reader.readAsDataURL(file);
+
+  // Faz upload para Firebase Storage
+  const ref = storage.ref('fotos/card-' + idx + '.jpg');
+  const uploadTask = ref.put(file);
+
+  uploadTask.on('state_changed',
+    null,
+    err => console.warn('Erro upload foto:', err.message),
+    async () => {
+      // Upload concluído — pega a URL pública e salva no Firestore
+      const url = await uploadTask.snapshot.ref.getDownloadURL();
+      photoStore[idx] = url;
+      renderCards();
+      saveToDB(); // salva URL no Firestore junto com o resto
+      console.log('✅ Foto salva no Storage:', url);
+    }
+  );
 }
 
 /* ═══════════════════════════════════════════════════
@@ -493,8 +533,14 @@ function handlePhoto(e, idx) {
 function openModal(idx) {
   const item = biblioteca[idx];
   const photo = photoStore[idx];
+
+  // Constrói TODO o HTML incluindo o iframe do Spotify de uma vez
+  // Isso é crucial: o iframe precisa ser criado durante o evento de clique
   document.getElementById('modal-inner').innerHTML = `
-    ${photo ? `<img class="modal-photo" src="${photo}" alt="foto"/>` : `<div class="modal-photo-empty"><em>Adicione uma foto no card ✦</em></div>`}
+    ${photo
+      ? `<img class="modal-photo" src="${photo}" alt="foto"/>`
+      : `<div class="modal-photo-empty"><em>Adicione uma foto no card ✦</em></div>`
+    }
     <div class="modal-body">
       <p class="modal-mood">${item.mood} · ${item.tag}</p>
       <h2 class="modal-title">${item.title}</h2>
@@ -503,7 +549,7 @@ function openModal(idx) {
         <span class="modal-ornament-sym">✦</span>
         <div class="modal-ornament-line" style="background:linear-gradient(to left,var(--gold),rgba(201,165,90,.06))"></div>
       </div>
-      <div class="modal-message">${item.message.map(p=>`<p>${p}</p>`).join('')}</div>
+      <div class="modal-message">${item.message.map(p => `<p>${p}</p>`).join('')}</div>
       <p class="modal-signature">${item.signature}</p>
       <a href="${item.spotify}" target="_blank" rel="noopener" class="modal-spotify-link">
         <div class="modal-spotify-logo">${SPG}</div>
@@ -514,22 +560,19 @@ function openModal(idx) {
         </div>
         <span class="modal-spotify-arrow">→</span>
       </a>
-      <div id="modal-embed-slot"></div>
+      ${buildSpotifyEmbed(item)}
     </div>`;
 
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-
-  // Pequeno delay para o DOM estar pronto antes de injetar o iframe
-  setTimeout(() => playSpotify(item), 300);
+  showToast(item);
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
-  // Remove iframe para parar música
-  const slot = document.getElementById('modal-embed-slot');
-  if (slot) slot.innerHTML = '';
+  // Limpa o modal (remove iframe do Spotify → para música)
+  document.getElementById('modal-inner').innerHTML = '';
 }
 
 document.getElementById('modal-overlay').addEventListener('click', e => {

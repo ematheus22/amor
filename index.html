@@ -185,6 +185,7 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
 @keyframes scrollPulse{0%,100%{opacity:.35}50%{opacity:.9}}
 @keyframes pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .fade-in{opacity:0;transform:translateY(18px);transition:opacity .75s ease,transform .75s ease;}
 .fade-in.visible{opacity:1;transform:translateY(0);}
 </style>
@@ -531,7 +532,11 @@ function renderCards() {
         <h3 class="card-title">${item.title}</h3>
         <p class="card-quote">${item.quote}</p>
         <div class="card-song">
-          <div class="card-song-icon">${SPG}</div>
+          <div class="card-song-icon" style="background:${(item.spotify||'').includes('youtu')?'#FF0000':'#1DB954'};">
+            ${(item.spotify||'').includes('youtu')
+              ? `<svg viewBox="0 0 24 24" width="11" height="11" fill="white"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>`
+              : SPG}
+          </div>
           <div style="flex:1;min-width:0;">
             <div class="card-song-name">${item.song}</div>
             <div class="card-song-artist">${item.artist}</div>
@@ -558,60 +563,65 @@ function openModal(idx) {
   const item  = biblioteca[idx];
   const photo = photoStore[idx];
   const link  = (item.spotify || '').trim();
+  const ytID  = getYouTubeID(link);
+  const isSp  = !ytID && link.includes('spotify.com');
 
-  const ytID = getYouTubeID(link);
-
-  // Player — YouTube tem autoplay REAL garantido pelo browser
+  // ── Player minimalista ──
+  // YouTube: iframe invisível (só áudio, controls ocultos) + barra de info
+  // Spotify: sem autoplay garantido, só botão
   let playerHTML = '';
   if (ytID) {
-    playerHTML = `<div style="margin-top:1rem;border-radius:4px;overflow:hidden;background:#000;">
-      <iframe
-        src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1&enablejsapi=1"
-        width="100%" height="80"
-        frameborder="0"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        allowfullscreen
-        style="display:block;border:none;">
-      </iframe>
-    </div>`;
-  } else if (link.includes('spotify.com')) {
-    // Spotify: sem garantia de autoplay mas mostra o player
+    // Iframe do YouTube — height=0 visualmente, mas o áudio toca
+    // A barra bonita fica em cima, o iframe fica colapsado
+    playerHTML = `
+      <div style="margin-top:1.2rem;">
+        <!-- Player visual minimalista -->
+        <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.2);border-radius:2px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:2px;">♪ tocando agora</div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+            <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
+          </div>
+          <a href="${link}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
+        </div>
+        <!-- iframe colapsado — toca o áudio -->
+        <iframe
+          src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
+          width="0" height="0"
+          frameborder="0"
+          allow="autoplay; encrypted-media"
+          style="position:absolute;opacity:0;pointer-events:none;">
+        </iframe>
+      </div>`;
+  } else if (isSp) {
     try {
       const u = new URL(link);
       if (/^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
-        playerHTML = `<div style="margin-top:1rem;border-radius:4px;overflow:hidden;">
-          <iframe
-            src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
-            width="100%" height="80"
-            frameborder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            allowfullscreen
-            style="display:block;border:none;">
-          </iframe>
-        </div>`;
+        playerHTML = `
+          <div style="margin-top:1.2rem;">
+            <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(29,185,84,.06);border:1px solid rgba(29,185,84,.2);border-radius:2px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#1DB954;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(29,185,84,.8);margin-bottom:2px;">Spotify</div>
+                <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+                <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
+              </div>
+              <a href="${link}" target="_blank" rel="noopener" style="color:rgba(29,185,84,.8);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
+            </div>
+            <iframe
+              src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
+              width="100%" height="80" frameborder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              style="display:block;border:none;border-radius:2px;margin-top:.5rem;">
+            </iframe>
+          </div>`;
       }
     } catch(e) {}
-  }
-
-  // Botão de link externo
-  let linkBtn = '';
-  if (link) {
-    const isYT = !!ytID;
-    const icon  = isYT
-      ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>`
-      : `<svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>`;
-    const label = isYT ? 'Ouvir no YouTube' : 'Abrir no Spotify';
-    const bg    = isYT ? '#FF0000' : '#1DB954';
-    linkBtn = `<a href="${link}" target="_blank" rel="noopener"
-      style="display:flex;align-items:center;gap:.9rem;padding:.85rem 1rem;text-decoration:none;border-radius:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);margin-top:1rem;">
-      <div style="width:34px;height:34px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:${bg};margin-bottom:2px;">${label}</div>
-        <div style="font-size:.9rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
-        <div style="font-size:.75rem;color:var(--muted);">${item.artist}</div>
-      </div>
-      <span style="color:${bg};font-size:1rem;">→</span>
-    </a>`;
   }
 
   document.getElementById('modal-inner').innerHTML = `
@@ -628,7 +638,6 @@ function openModal(idx) {
       </div>
       <div class="modal-message">${item.message.map(p=>`<p>${p}</p>`).join('')}</div>
       <p class="modal-signature">${item.signature}</p>
-      ${linkBtn}
       ${playerHTML}
     </div>`;
 

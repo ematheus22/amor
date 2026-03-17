@@ -7,10 +7,9 @@
 <title>Nossa Biblioteca — Eychila & Matheus</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=IM+Fell+English:ital@0;1&family=Petit+Formal+Script&display=swap" rel="stylesheet">
 
-<!-- Firebase via CDN compatível com script normal (não module) -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <style>
 :root{
@@ -351,8 +350,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db      = firebase.firestore();
-const storage = firebase.storage();
+const db = firebase.firestore();
 
 async function loadFromDB() {
   try {
@@ -381,11 +379,13 @@ async function loadFromDB() {
 
 async function saveToDB() {
   try {
-    // Só salva URLs do Storage (https://...), ignora base64 temporário
+    // Comprime fotos antes de salvar (reduz tamanho do base64)
     const photoURLs = {};
-    Object.keys(photoStore).forEach(k => {
-      if (isStorageURL(photoStore[k])) photoURLs[k] = photoStore[k];
-    });
+    const compressPromises = Object.keys(photoStore).map(k =>
+      compressImage(photoStore[k]).then(compressed => { photoURLs[k] = compressed; })
+    );
+    await Promise.all(compressPromises);
+
     await db.collection('config').doc('main').set(
       { biblioteca, hero: heroData, photos: photoURLs },
       { merge: true }
@@ -393,8 +393,30 @@ async function saveToDB() {
     console.log('✅ Salvo no Firebase');
   } catch(e) {
     console.warn('⚠️ Erro Firebase save:', e.message);
-    alert('Erro ao salvar. Verifique sua conexão.');
+    alert('Erro ao salvar: ' + e.message);
   }
+}
+
+// Comprime imagem para base64 menor (max 800px, qualidade 0.7)
+function compressImage(src) {
+  return new Promise(resolve => {
+    if (!src || src.startsWith('http')) { resolve(src); return; }
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
 }
 
 /* ═══════════════════════════════════════════════════
@@ -500,73 +522,39 @@ function renderCards() {
 }
 
 /* ═══════════════════════════════════════════════════
-   FOTO — preview local + upload Storage + salva URL
+   FOTO — salva base64 comprimido direto no Firestore
+   (mesmo método do seu outro projeto, sem Storage)
 ═══════════════════════════════════════════════════ */
-function isStorageURL(v) { return v && v.startsWith('http'); }
-
-function showPhotoStatus(idx, msg, cor) {
-  const el = document.getElementById('photo-status-' + idx);
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = cor;
-  el.style.opacity = '1';
-  if (cor === '#1DB954') setTimeout(() => { el.style.opacity = '0'; }, 3000);
-}
-
 function handlePhoto(e, idx) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // 1. Preview local imediato
+  const statusEl = document.getElementById('photo-status-' + idx);
+  if (statusEl) { statusEl.textContent = '⏳ Salvando...'; statusEl.style.color = '#c9a55a'; statusEl.style.opacity = '1'; }
+
   const reader = new FileReader();
-  reader.onload = ev => {
-    photoStore[idx] = ev.target.result;
+  reader.onload = async ev => {
+    // Comprime e salva
+    const compressed = await compressImage(ev.target.result);
+    photoStore[idx] = compressed;
     renderCards();
-    showPhotoStatus(idx, '⏳ Salvando...', '#c9a55a');
+
+    // Salva direto no Firestore como base64
+    try {
+      await db.collection('config').doc('main').set(
+        { photos: { [idx]: compressed } },
+        { merge: true }
+      );
+      const s2 = document.getElementById('photo-status-' + idx);
+      if (s2) { s2.textContent = '✓ Salva!'; s2.style.color = '#1DB954'; setTimeout(() => { s2.style.opacity = '0'; }, 2500); }
+      console.log('✅ Foto salva no Firestore');
+    } catch(err) {
+      const s2 = document.getElementById('photo-status-' + idx);
+      if (s2) { s2.textContent = '⚠ Erro'; s2.style.color = '#c0616b'; }
+      console.error('Erro ao salvar foto:', err.message);
+    }
   };
   reader.readAsDataURL(file);
-
-  // 2. Tenta upload — primeiro bucket novo, depois o antigo como fallback
-  function tryUpload(bucket) {
-    const storageRef = bucket
-      ? firebase.app().storage('gs://' + bucket).ref('fotos/card-' + idx + '.jpg')
-      : storage.ref('fotos/card-' + idx + '.jpg');
-
-    storageRef.put(file)
-      .then(async snap => {
-        const url = await snap.ref.getDownloadURL();
-        photoStore[idx] = url;
-        renderCards();
-        await savePhotoURL(idx, url);
-        showPhotoStatus(idx, '✓ Foto salva!', '#1DB954');
-        console.log('✅ Foto salva no Storage:', url);
-      })
-      .catch(err => {
-        console.warn('Erro Storage (' + (bucket || 'default') + '):', err.code, err.message);
-        if (bucket) {
-          // Tenta sem bucket explícito (usa o do config)
-          tryUpload(null);
-        } else {
-          showPhotoStatus(idx, '⚠ Erro ao salvar foto', '#c0616b');
-          console.error('Upload falhou definitivamente:', err);
-        }
-      });
-  }
-
-  // Tenta primeiro com o bucket novo (.firebasestorage.app)
-  tryUpload('amor-c6306.firebasestorage.app');
-}
-
-async function savePhotoURL(idx, url) {
-  try {
-    await db.collection('config').doc('main').set(
-      { photos: { [idx]: url } },
-      { merge: true }
-    );
-    console.log('✅ URL da foto salva no Firestore');
-  } catch(e) {
-    console.warn('Erro savePhotoURL:', e.message);
-  }
 }
 
 /* ═══════════════════════════════════════════════════

@@ -243,7 +243,10 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
 <div class="edit-bar">
   <button class="edit-toggle" onclick="pedirPIN()">✦ &nbsp; Editar &nbsp; ✦</button>
   <div class="edit-panel" id="edit-panel">
-    <p class="edit-panel-title">Personalizar nossa biblioteca</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <p class="edit-panel-title" style="margin-bottom:0;">Personalizar nossa biblioteca</p>
+      <button onclick="fecharEditor()" style="background:none;border:1px solid rgba(201,165,90,.25);color:rgba(245,237,224,.5);width:36px;height:36px;cursor:pointer;font-size:1.1rem;flex-shrink:0;border-radius:2px;transition:all .2s;" title="Fechar">✕</button>
+    </div>
     <div class="edit-tabs">
       <button class="edit-tab active" onclick="switchTab('tab-hero',this)">Página inicial</button>
       <button class="edit-tab" onclick="switchTab('tab-cards',this)">Cartas &amp; Músicas</button>
@@ -378,14 +381,15 @@ async function loadFromDB() {
 
 async function saveToDB() {
   try {
-    // Salva fotos como URLs (já foram salvas no Storage pelo handlePhoto)
+    // Só salva URLs do Storage (https://...), ignora base64 temporário
     const photoURLs = {};
-    Object.keys(photoStore).forEach(k => { photoURLs[k] = photoStore[k]; });
-    await db.collection('config').doc('main').set({
-      biblioteca,
-      hero: heroData,
-      photos: photoURLs
+    Object.keys(photoStore).forEach(k => {
+      if (isStorageURL(photoStore[k])) photoURLs[k] = photoStore[k];
     });
+    await db.collection('config').doc('main').set(
+      { biblioteca, hero: heroData, photos: photoURLs },
+      { merge: true }
+    );
     console.log('✅ Salvo no Firebase');
   } catch(e) {
     console.warn('⚠️ Erro Firebase save:', e.message);
@@ -495,36 +499,44 @@ function renderCards() {
 }
 
 /* ═══════════════════════════════════════════════════
-   FOTO — salva no Firebase Storage e persiste
+   FOTO — preview local + upload Storage + salva URL
 ═══════════════════════════════════════════════════ */
+// photoStore guarda: base64 temporário OU url do Storage (começa com https)
+function isStorageURL(v) { return v && v.startsWith('http'); }
+
 function handlePhoto(e, idx) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Mostra preview local imediatamente
+  // 1. Preview local imediato (base64)
   const reader = new FileReader();
   reader.onload = ev => {
-    photoStore[idx] = ev.target.result;
+    photoStore[idx] = ev.target.result; // base64 temporário
     renderCards();
   };
   reader.readAsDataURL(file);
 
-  // Faz upload para Firebase Storage
+  // 2. Upload para Firebase Storage
   const ref = storage.ref('fotos/card-' + idx + '.jpg');
-  const uploadTask = ref.put(file);
+  ref.put(file).then(async snap => {
+    const url = await snap.ref.getDownloadURL();
+    photoStore[idx] = url; // substitui base64 pela URL permanente
+    renderCards();
+    await savePhotoURL(idx, url); // salva só a URL no Firestore
+    console.log('✅ Foto salva:', url);
+  }).catch(err => {
+    console.warn('⚠️ Erro upload foto:', err.message);
+  });
+}
 
-  uploadTask.on('state_changed',
-    null,
-    err => console.warn('Erro upload foto:', err.message),
-    async () => {
-      // Upload concluído — pega a URL pública e salva no Firestore
-      const url = await uploadTask.snapshot.ref.getDownloadURL();
-      photoStore[idx] = url;
-      renderCards();
-      saveToDB(); // salva URL no Firestore junto com o resto
-      console.log('✅ Foto salva no Storage:', url);
-    }
-  );
+// Salva apenas as URLs de fotos sem reescrever biblioteca inteira
+async function savePhotoURL(idx, url) {
+  try {
+    await db.collection('config').doc('main').set(
+      { photos: { [idx]: url } },
+      { merge: true } // merge=true não apaga outros campos
+    );
+  } catch(e) { console.warn('Erro savePhotoURL:', e.message); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -603,11 +615,20 @@ let pinBuffer = '';
 let pinUnlocked = false;
 
 function pedirPIN() {
+  const panel = document.getElementById('edit-panel');
+  // Se já está aberto, fecha
+  if (panel.classList.contains('open')) { fecharEditor(); return; }
+  // Se já desbloqueado, abre direto
   if (pinUnlocked) { abrirEditor(); return; }
+  // Senão pede PIN
   pinBuffer = '';
   atualizarPIN();
   document.getElementById('pin-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+function fecharEditor() {
+  document.getElementById('edit-panel').classList.remove('open');
 }
 
 function pinKey(k) {

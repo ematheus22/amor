@@ -354,24 +354,26 @@ const db = firebase.firestore();
 
 async function loadFromDB() {
   try {
+    // 1. Carrega dados principais (biblioteca + hero)
     const snap = await db.collection('config').doc('main').get();
     if (snap.exists) {
       const d = snap.data();
       if (d.biblioteca && d.biblioteca.length) biblioteca = d.biblioteca;
       if (d.hero) heroData = d.hero;
-      // Carrega fotos salvas no Storage
-      if (d.photos) {
-        Object.keys(d.photos).forEach(idx => {
-          photoStore[idx] = d.photos[idx]; // URL do Storage
-        });
-      }
-      applyHeroToDOM();
-      renderCards();
-      buildCardSelector();
-      console.log('✅ Firebase carregado');
-    } else {
-      console.log('ℹ️ Nenhum dado no Firebase ainda — usando padrão');
     }
+
+    // 2. Carrega fotos de documentos separados em paralelo
+    const fotoPromises = biblioteca.map((_, i) =>
+      db.collection('config').doc('foto-' + i).get()
+        .then(s => { if (s.exists && s.data().url) photoStore[i] = s.data().url; })
+        .catch(() => {}) // sem foto ainda = ok
+    );
+    await Promise.all(fotoPromises);
+
+    applyHeroToDOM();
+    renderCards();
+    buildCardSelector();
+    console.log('✅ Firebase carregado, fotos:', Object.keys(photoStore).length);
   } catch(e) {
     console.warn('⚠️ Erro Firebase load:', e.message);
   }
@@ -379,18 +381,13 @@ async function loadFromDB() {
 
 async function saveToDB() {
   try {
-    // Comprime fotos antes de salvar (reduz tamanho do base64)
-    const photoURLs = {};
-    const compressPromises = Object.keys(photoStore).map(k =>
-      compressImage(photoStore[k]).then(compressed => { photoURLs[k] = compressed; })
-    );
-    await Promise.all(compressPromises);
-
+    // Salva apenas biblioteca e hero no documento principal
+    // Fotos são salvas separadamente pelo handlePhoto
     await db.collection('config').doc('main').set(
-      { biblioteca, hero: heroData, photos: photoURLs },
+      { biblioteca, hero: heroData },
       { merge: true }
     );
-    console.log('✅ Salvo no Firebase');
+    console.log('✅ Biblioteca e hero salvos no Firebase');
   } catch(e) {
     console.warn('⚠️ Erro Firebase save:', e.message);
     alert('Erro ao salvar: ' + e.message);
@@ -522,36 +519,47 @@ function renderCards() {
 }
 
 /* ═══════════════════════════════════════════════════
-   FOTO — salva base64 comprimido direto no Firestore
-   (mesmo método do seu outro projeto, sem Storage)
+   FOTO — cada foto fica em documento separado no Firestore
+   /config/foto-0, /config/foto-1 etc.
+   Assim nunca estoura o limite de 1MB por documento.
 ═══════════════════════════════════════════════════ */
 function handlePhoto(e, idx) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const statusEl = document.getElementById('photo-status-' + idx);
-  if (statusEl) { statusEl.textContent = '⏳ Salvando...'; statusEl.style.color = '#c9a55a'; statusEl.style.opacity = '1'; }
+  // Mostra status imediatamente
+  function setStatus(msg, cor) {
+    const el = document.getElementById('photo-status-' + idx);
+    if (!el) return;
+    el.textContent = msg; el.style.color = cor; el.style.opacity = '1';
+    if (cor === '#1DB954') setTimeout(() => el.style.opacity = '0', 3000);
+  }
+
+  setStatus('⏳ Salvando...', '#c9a55a');
 
   const reader = new FileReader();
   reader.onload = async ev => {
-    // Comprime e salva
+    // Comprime a imagem
     const compressed = await compressImage(ev.target.result);
+    
+    // Preview local imediato — sem chamar renderCards() ainda
     photoStore[idx] = compressed;
-    renderCards();
+    const imgEl = document.querySelector('#cphoto-' + idx + ' img');
+    const placeholder = document.querySelector('#cphoto-' + idx + ' .card-photo-placeholder');
+    if (imgEl) {
+      imgEl.src = compressed;
+    } else if (placeholder) {
+      placeholder.outerHTML = `<img src="${compressed}" alt="foto" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
+    }
 
-    // Salva direto no Firestore como base64
+    // Salva em documento próprio: /config/foto-{idx}
     try {
-      await db.collection('config').doc('main').set(
-        { photos: { [idx]: compressed } },
-        { merge: true }
-      );
-      const s2 = document.getElementById('photo-status-' + idx);
-      if (s2) { s2.textContent = '✓ Salva!'; s2.style.color = '#1DB954'; setTimeout(() => { s2.style.opacity = '0'; }, 2500); }
-      console.log('✅ Foto salva no Firestore');
+      await db.collection('config').doc('foto-' + idx).set({ url: compressed });
+      setStatus('✓ Salva!', '#1DB954');
+      console.log('✅ Foto', idx, 'salva no Firestore');
     } catch(err) {
-      const s2 = document.getElementById('photo-status-' + idx);
-      if (s2) { s2.textContent = '⚠ Erro'; s2.style.color = '#c0616b'; }
-      console.error('Erro ao salvar foto:', err.message);
+      setStatus('⚠ Erro: ' + err.code, '#c0616b');
+      console.error('Erro ao salvar foto', idx, ':', err.message);
     }
   };
   reader.readAsDataURL(file);

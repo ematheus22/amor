@@ -345,7 +345,7 @@ const firebaseConfig = {
   apiKey:            "AIzaSyCKrt5WZ1klsUa679gGNO9x7j4q9_Nfzqk",
   authDomain:        "amor-c6306.firebaseapp.com",
   projectId:         "amor-c6306",
-  storageBucket:     "amor-c6306.firebasestorage.app",
+  storageBucket:     "amor-c6306.appspot.com",
   messagingSenderId: "42536460231",
   appId:             "1:42536460231:web:edb1490b46132e1223c3e2"
 };
@@ -478,6 +478,7 @@ function renderCards() {
         ${photo ? `<img src="${photo}" alt="foto"/>` : `<div class="card-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="28" height="28"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Foto do casal</span></div>`}
         <div class="card-photo-overlay"></div>
         <label class="card-photo-upload">+ Foto<input type="file" accept="image/*" style="display:none" onchange="handlePhoto(event,${i})"/></label>
+        <span id="photo-status-${i}" style="position:absolute;bottom:38px;right:8px;font-size:.6rem;font-family:'Cormorant Garamond',Georgia,serif;background:rgba(12,9,8,.75);padding:2px 7px;border-radius:1px;opacity:0;transition:opacity .3s;pointer-events:none;"></span>
       </div>
       <div class="card-body">
         <p class="card-mood">${item.mood}</p>
@@ -501,42 +502,71 @@ function renderCards() {
 /* ═══════════════════════════════════════════════════
    FOTO — preview local + upload Storage + salva URL
 ═══════════════════════════════════════════════════ */
-// photoStore guarda: base64 temporário OU url do Storage (começa com https)
 function isStorageURL(v) { return v && v.startsWith('http'); }
+
+function showPhotoStatus(idx, msg, cor) {
+  const el = document.getElementById('photo-status-' + idx);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = cor;
+  el.style.opacity = '1';
+  if (cor === '#1DB954') setTimeout(() => { el.style.opacity = '0'; }, 3000);
+}
 
 function handlePhoto(e, idx) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // 1. Preview local imediato (base64)
+  // 1. Preview local imediato
   const reader = new FileReader();
   reader.onload = ev => {
-    photoStore[idx] = ev.target.result; // base64 temporário
+    photoStore[idx] = ev.target.result;
     renderCards();
+    showPhotoStatus(idx, '⏳ Salvando...', '#c9a55a');
   };
   reader.readAsDataURL(file);
 
-  // 2. Upload para Firebase Storage
-  const ref = storage.ref('fotos/card-' + idx + '.jpg');
-  ref.put(file).then(async snap => {
-    const url = await snap.ref.getDownloadURL();
-    photoStore[idx] = url; // substitui base64 pela URL permanente
-    renderCards();
-    await savePhotoURL(idx, url); // salva só a URL no Firestore
-    console.log('✅ Foto salva:', url);
-  }).catch(err => {
-    console.warn('⚠️ Erro upload foto:', err.message);
-  });
+  // 2. Tenta upload — primeiro bucket novo, depois o antigo como fallback
+  function tryUpload(bucket) {
+    const storageRef = bucket
+      ? firebase.app().storage('gs://' + bucket).ref('fotos/card-' + idx + '.jpg')
+      : storage.ref('fotos/card-' + idx + '.jpg');
+
+    storageRef.put(file)
+      .then(async snap => {
+        const url = await snap.ref.getDownloadURL();
+        photoStore[idx] = url;
+        renderCards();
+        await savePhotoURL(idx, url);
+        showPhotoStatus(idx, '✓ Foto salva!', '#1DB954');
+        console.log('✅ Foto salva no Storage:', url);
+      })
+      .catch(err => {
+        console.warn('Erro Storage (' + (bucket || 'default') + '):', err.code, err.message);
+        if (bucket) {
+          // Tenta sem bucket explícito (usa o do config)
+          tryUpload(null);
+        } else {
+          showPhotoStatus(idx, '⚠ Erro ao salvar foto', '#c0616b');
+          console.error('Upload falhou definitivamente:', err);
+        }
+      });
+  }
+
+  // Tenta primeiro com o bucket novo (.firebasestorage.app)
+  tryUpload('amor-c6306.firebasestorage.app');
 }
 
-// Salva apenas as URLs de fotos sem reescrever biblioteca inteira
 async function savePhotoURL(idx, url) {
   try {
     await db.collection('config').doc('main').set(
       { photos: { [idx]: url } },
-      { merge: true } // merge=true não apaga outros campos
+      { merge: true }
     );
-  } catch(e) { console.warn('Erro savePhotoURL:', e.message); }
+    console.log('✅ URL da foto salva no Firestore');
+  } catch(e) {
+    console.warn('Erro savePhotoURL:', e.message);
+  }
 }
 
 /* ═══════════════════════════════════════════════════

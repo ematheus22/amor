@@ -304,15 +304,6 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
 
 <footer><p>Nossa história, nossas músicas &nbsp;✦&nbsp; Eychila &amp; Matheus</p></footer>
 
-<!-- iframe persistente do Spotify — fica aqui fora do modal, move pra dentro ao abrir -->
-<iframe id="sp-persistent"
-  src="about:blank"
-  width="100%" height="80"
-  frameborder="0"
-  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-  allowfullscreen
-  style="display:none;border:none;border-radius:4px;"></iframe>
-
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal" id="modal-box">
     <div class="modal-handle"><div class="modal-handle-bar"></div></div>
@@ -509,38 +500,6 @@ const photoStore = {};
 let selectedCardIdx = null;
 
 /* ═══════════════ SPOTIFY ═══════════════ */
-/* ═══════════════ SPOTIFY — iframe persistente ═══════════════
-   O browser só permite autoplay em iframes criados DURANTE
-   o evento de clique. A solução mais confiável é ter um iframe
-   já presente no DOM e apenas trocar o src — isso preserva
-   o contexto de interação do usuário.
-══════════════════════════════════════════════════════════════ */
-function playSpotify(spotifyUrl) {
-  let embedSrc = '';
-  try {
-    const u = new URL(spotifyUrl);
-    if (u.hostname.includes('spotify.com') && /^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
-      embedSrc = 'https://open.spotify.com/embed' + u.pathname + '?autoplay=1&utm_source=generator&theme=0';
-    }
-  } catch(e) {}
-
-  const frame = document.getElementById('sp-persistent');
-  if (!frame) return;
-
-  if (embedSrc) {
-    frame.src = embedSrc;
-    frame.style.display = 'block';
-  } else {
-    frame.src = 'about:blank';
-    frame.style.display = 'none';
-  }
-}
-
-function stopSpotify() {
-  const frame = document.getElementById('sp-persistent');
-  if (frame) { frame.src = 'about:blank'; frame.style.display = 'none'; }
-}
-
 function showToast(item) {
   document.getElementById('toast-song').textContent = item.song + ' — ' + item.artist;
   document.getElementById('music-toast').classList.add('show');
@@ -587,12 +546,38 @@ function openModal(idx) {
   const item = biblioteca[idx];
   const photo = photoStore[idx];
 
+  // Monta URL do embed
+  let embedHTML = '';
+  try {
+    const u = new URL(item.spotify);
+    if (u.hostname.includes('spotify.com') && /^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
+      // Cria iframe AQUI, dentro do handler de clique — isso é o que permite autoplay
+      const embedSrc = 'https://open.spotify.com/embed' + u.pathname + '?autoplay=1&utm_source=generator&theme=0';
+      embedHTML = `<div style="margin-top:1rem;border-radius:4px;overflow:hidden;">
+        <iframe
+          src="${embedSrc}"
+          width="100%" height="80"
+          frameborder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          allowfullscreen
+          style="display:block;border:none;">
+        </iframe>
+      </div>`;
+    }
+  } catch(e) {}
+
   document.getElementById('modal-inner').innerHTML = `
-    ${photo ? `<img class="modal-photo" src="${photo}" alt="foto"/>` : `<div class="modal-photo-empty"><em>Adicione uma foto no card ✦</em></div>`}
+    ${photo
+      ? `<img class="modal-photo" src="${photo}" alt="foto"/>`
+      : `<div class="modal-photo-empty"><em>Adicione uma foto no card ✦</em></div>`}
     <div class="modal-body">
       <p class="modal-mood">${item.mood} · ${item.tag}</p>
       <h2 class="modal-title">${item.title}</h2>
-      <div class="modal-ornament"><div class="modal-ornament-line"></div><span class="modal-ornament-sym">✦</span><div class="modal-ornament-line" style="background:linear-gradient(to left,var(--gold),transparent)"></div></div>
+      <div class="modal-ornament">
+        <div class="modal-ornament-line"></div>
+        <span class="modal-ornament-sym">✦</span>
+        <div class="modal-ornament-line" style="background:linear-gradient(to left,var(--gold),transparent)"></div>
+      </div>
       <div class="modal-message">${item.message.map(p=>`<p>${p}</p>`).join('')}</div>
       <p class="modal-signature">${item.signature}</p>
       <a href="${item.spotify}" target="_blank" rel="noopener" class="modal-spotify-link">
@@ -604,31 +589,18 @@ function openModal(idx) {
         </div>
         <span class="modal-spotify-arrow">→</span>
       </a>
-      <div id="sp-embed-slot"></div>
+      ${embedHTML}
     </div>`;
 
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   showToast(item);
-
-  // Move iframe persistente para dentro do modal (mantém contexto de clique)
-  const frame = document.getElementById('sp-persistent');
-  const slot   = document.getElementById('sp-embed-slot');
-  if (frame && slot) {
-    slot.appendChild(frame);
-    playSpotify(item.spotify);
-  }
 }
 
 function closeModal() {
-  // Devolve iframe para fora do modal antes de limpar
-  const frame = document.getElementById('sp-persistent');
-  if (frame) {
-    frame.src = 'about:blank';
-    document.body.appendChild(frame);
-  }
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
+  // Limpa o innerHTML — isso destrói o iframe e para a música
   document.getElementById('modal-inner').innerHTML = '';
 }
 

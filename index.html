@@ -290,9 +290,25 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
           <div class="edit-group"><label class="edit-label">Artista</label><input class="edit-input" id="ce-artist"/></div>
         </div>
         <div class="edit-group">
-          <label class="edit-label">Link do YouTube (para tocar) ou Spotify (para abrir)</label>
-          <input class="edit-input" id="ce-spotify" placeholder="https://www.youtube.com/watch?v=... ou https://open.spotify.com/track/..." inputmode="url"/>
-          <p class="spotify-hint">Cole o link do YouTube da música — vai tocar automaticamente ao abrir a carta. Ou cole o Spotify para só abrir o app.</p>
+          <label class="edit-label">Arquivo MP3 da música</label>
+          <div id="ce-audio-preview" style="display:none;padding:.7rem 1rem;background:rgba(201,165,90,.06);border:1px solid rgba(201,165,90,.2);border-radius:2px;margin-bottom:.6rem;">
+            <audio id="ce-audio-player" controls style="width:100%;height:32px;accent-color:var(--gold);"></audio>
+            <p id="ce-audio-name" style="font-size:.7rem;color:rgba(245,237,224,.45);margin-top:.4rem;font-style:italic;"></p>
+          </div>
+          <label style="display:inline-flex;align-items:center;gap:8px;background:rgba(201,165,90,.1);border:1px solid var(--gold);color:var(--gold);padding:.5rem 1.2rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;min-height:40px;border-radius:2px;">
+            ♪ Escolher MP3
+            <input type="file" accept="audio/mp3,audio/mpeg,audio/*" style="display:none" id="ce-audio-input" onchange="handleAudio(event)"/>
+          </label>
+          <span id="ce-audio-status" style="font-size:.75rem;font-style:italic;margin-left:.8rem;"></span>
+          <p style="font-size:.68rem;color:rgba(245,237,224,.28);margin-top:.5rem;font-style:italic;line-height:1.5;">
+            Selecione o MP3 da música. Ele será enviado para o Cloudinary e tocará automaticamente ao abrir a carta.<br>
+            <strong style="color:rgba(201,165,90,.5);">Cloudinary Cloud Name: </strong><span id="cloudinary-name-display" style="color:rgba(201,165,90,.7);">não configurado</span>
+          </p>
+        </div>
+        <div class="edit-group">
+          <label class="edit-label">Link do Spotify (opcional — para abrir no app)</label>
+          <input class="edit-input" id="ce-spotify" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
+          <p class="spotify-hint">Opcional: cole o link do Spotify para mostrar botão de abrir no app.</p>
         </div>
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;">
           <button class="edit-save-btn" onclick="saveCard()">Salvar carta</button>
@@ -353,6 +369,23 @@ firebase.initializeApp({
 });
 const db = firebase.firestore();
 
+/* ═══════════════ CLOUDINARY CONFIG ═══════════════
+   1. Crie conta grátis em cloudinary.com
+   2. Vá em Settings > Upload > Add upload preset
+      - Signing Mode: Unsigned
+      - Folder: musicas
+      - Copie o nome do preset
+   3. Preencha abaixo com seu Cloud Name e Upload Preset
+══════════════════════════════════════════════════ */
+const CLOUDINARY_CLOUD  = 'dddlsjznb';   // Cloud Name configurado
+const CLOUDINARY_PRESET = 'amor';         // Upload Preset configurado
+
+// Mostra cloud name na tela de edição
+window.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('cloudinary-name-display');
+  if (el) el.textContent = CLOUDINARY_CLOUD === 'SEU_CLOUD_NAME' ? 'não configurado' : CLOUDINARY_CLOUD;
+});
+
 // Coleções:
 // "config"   → doc "main"   : { biblioteca, hero }
 // "pictures" → doc "card-0" : { url: "data:image/jpeg;base64,..." }
@@ -374,7 +407,13 @@ async function loadFromDB() {
         .then(s => { if (s.exists && s.data().url) photoStore[i] = s.data().url; })
         .catch(() => {}),
       db.collection('musicas').doc('card-' + i).get()
-        .then(s => { if (s.exists && s.data().link) biblioteca[i].spotify = s.data().link; })
+        .then(s => {
+          if (s.exists) {
+            if (s.data().link)    biblioteca[i].spotify   = s.data().link;
+            if (s.data().tipo)    biblioteca[i].audioTipo = s.data().tipo;
+            if (s.data().filename) biblioteca[i].audioFile = s.data().filename;
+          }
+        })
         .catch(() => {})
     ]).flat();
     await Promise.all(promises);
@@ -423,6 +462,73 @@ function compressImage(dataURL) {
     };
     img.src = dataURL;
   });
+}
+
+/* ═══════════════ ÁUDIO — upload Cloudinary + salva URL em musicas/card-{i} ═══════════════ */
+async function handleAudio(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const idx = selectedCardIdx;
+  if (idx === null) { alert('Selecione uma carta primeiro'); return; }
+
+  const statusEl = document.getElementById('ce-audio-status');
+  const preview  = document.getElementById('ce-audio-preview');
+  const player   = document.getElementById('ce-audio-player');
+  const nameEl   = document.getElementById('ce-audio-name');
+
+  function setStatus(txt, cor) {
+    if (statusEl) { statusEl.textContent = txt; statusEl.style.color = cor; }
+  }
+
+  if (CLOUDINARY_CLOUD === 'SEU_CLOUD_NAME') {
+    setStatus('⚠ Configure o Cloudinary primeiro', '#c0616b');
+    return;
+  }
+
+  // Preview local imediato
+  const localURL = URL.createObjectURL(file);
+  if (preview) preview.style.display = 'block';
+  if (player)  player.src = localURL;
+  if (nameEl)  nameEl.textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
+  setStatus('⏳ Enviando...', '#c9a55a');
+
+  // Upload para Cloudinary
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', 'musicas');
+    formData.append('resource_type', 'video'); // Cloudinary usa 'video' para audio
+
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/video/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+
+    if (data.secure_url) {
+      const audioURL = data.secure_url;
+      // Atualiza player com URL definitiva
+      if (player) player.src = audioURL;
+      // Salva no Firebase: coleção "musicas", doc "card-{idx}"
+      await db.collection('musicas').doc('card-' + idx).set({
+        link:     audioURL,
+        filename: file.name,
+        tipo:     'mp3'
+      });
+      // Atualiza biblioteca local
+      biblioteca[idx].spotify = audioURL;
+      biblioteca[idx].audioTipo = 'mp3';
+      renderCards();
+      setStatus('✓ MP3 salvo!', '#1DB954');
+      console.log('✅ musicas/card-' + idx, audioURL);
+    } else {
+      throw new Error(data.error?.message || 'Resposta inválida do Cloudinary');
+    }
+  } catch(err) {
+    setStatus('⚠ Erro: ' + err.message, '#c0616b');
+    console.error('Erro Cloudinary:', err);
+  }
 }
 
 /* ═══════════════ FOTO — salva em pictures/card-{i} ═══════════════ */
@@ -563,61 +669,64 @@ function openModal(idx) {
   const item  = biblioteca[idx];
   const photo = photoStore[idx];
   const link  = (item.spotify || '').trim();
+  const tipo  = item.audioTipo || '';
   const ytID  = getYouTubeID(link);
   const isSp  = !ytID && link.includes('spotify.com');
+  const isMp3 = tipo === 'mp3' && link.startsWith('http');
 
-  // ── Player minimalista ──
-  // YouTube: iframe invisível (só áudio, controls ocultos) + barra de info
-  // Spotify: sem autoplay garantido, só botão
+  // ── Player de áudio ──
   let playerHTML = '';
-  if (ytID) {
-    // Iframe do YouTube — height=0 visualmente, mas o áudio toca
-    // A barra bonita fica em cima, o iframe fica colapsado
+
+  if (isMp3) {
+    // MP3 via Cloudinary — player nativo HTML5, sem anúncios, toca imediatamente
     playerHTML = `
-      <div style="margin-top:1.2rem;">
-        <!-- Player visual minimalista -->
-        <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.2);border-radius:2px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      <div style="margin-top:1.2rem;padding:1rem;background:rgba(201,165,90,.06);border:1px solid rgba(201,165,90,.2);border-radius:2px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.7rem;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 4s linear infinite;">
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="var(--ink)"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:2px;">♪ tocando agora</div>
-            <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
-            <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
+            <div style="font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,165,90,.7);margin-bottom:1px;">♪ tocando agora</div>
+            <div style="font-size:.86rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+            <div style="font-size:.7rem;color:var(--muted);">${item.artist}</div>
           </div>
-          <a href="${link}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
         </div>
-        <!-- iframe colapsado — toca o áudio -->
-        <iframe
-          src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
-          width="0" height="0"
-          frameborder="0"
+        <audio autoplay controls style="width:100%;height:36px;accent-color:var(--gold);">
+          <source src="${link}" type="audio/mpeg">
+        </audio>
+      </div>`;
+  } else if (ytID) {
+    // YouTube — iframe colapsado, player visual minimalista
+    playerHTML = `
+      <div style="margin-top:1.2rem;">
+        <div style="display:flex;align-items:center;gap:10px;padding:.85rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.18);border-radius:2px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="white"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:1px;">♪ tocando agora</div>
+            <div style="font-size:.86rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+            <div style="font-size:.7rem;color:var(--muted);">${item.artist}</div>
+          </div>
+          <a href="${link}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
+        </div>
+        <iframe src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
+          width="0" height="0" frameborder="0"
           allow="autoplay; encrypted-media"
           style="position:absolute;opacity:0;pointer-events:none;">
         </iframe>
       </div>`;
   } else if (isSp) {
+    // Spotify fallback
     try {
       const u = new URL(link);
       if (/^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
         playerHTML = `
           <div style="margin-top:1.2rem;">
-            <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(29,185,84,.06);border:1px solid rgba(29,185,84,.2);border-radius:2px;">
-              <div style="width:32px;height:32px;border-radius:50%;background:#1DB954;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(29,185,84,.8);margin-bottom:2px;">Spotify</div>
-                <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
-                <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
-              </div>
-              <a href="${link}" target="_blank" rel="noopener" style="color:rgba(29,185,84,.8);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
-            </div>
-            <iframe
-              src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
+            <iframe src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
               width="100%" height="80" frameborder="0"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              style="display:block;border:none;border-radius:2px;margin-top:.5rem;">
+              style="display:block;border:none;border-radius:2px;">
             </iframe>
           </div>`;
       }
@@ -785,6 +894,21 @@ function selectCard(idx) {
     }
   }
   if (status) status.textContent = '';
+
+  // Mostra preview de áudio se houver MP3 salvo
+  const audioPreview = document.getElementById('ce-audio-preview');
+  const audioPlayer  = document.getElementById('ce-audio-player');
+  const audioName    = document.getElementById('ce-audio-name');
+  const audioStatus  = document.getElementById('ce-audio-status');
+  if (audioStatus) audioStatus.textContent = '';
+  if (item.audioTipo === 'mp3' && item.spotify) {
+    if (audioPreview) audioPreview.style.display = 'block';
+    if (audioPlayer)  audioPlayer.src = item.spotify;
+    if (audioName)    audioName.textContent = item.audioFile || 'MP3 salvo';
+  } else {
+    if (audioPreview) { audioPreview.style.display = 'none'; }
+    if (audioPlayer)  audioPlayer.src = '';
+  }
 
   document.getElementById('card-edit-form').style.display = 'block';
   setTimeout(() => document.getElementById('card-edit-form').scrollIntoView({behavior:'smooth',block:'start'}), 100);

@@ -290,9 +290,34 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
           <div class="edit-group"><label class="edit-label">Artista</label><input class="edit-input" id="ce-artist"/></div>
         </div>
         <div class="edit-group">
-          <label class="edit-label">Link do YouTube (para tocar) ou Spotify (para abrir)</label>
+          <label class="edit-label">Arquivo MP3 da música</label>
+          <div id="ce-audio-preview" style="display:none;padding:.7rem 1rem;background:rgba(201,165,90,.06);border:1px solid rgba(201,165,90,.2);border-radius:2px;margin-bottom:.6rem;">
+            <audio id="ce-audio-player" controls style="width:100%;height:32px;accent-color:var(--gold);"></audio>
+            <p id="ce-audio-name" style="font-size:.7rem;color:rgba(245,237,224,.45);margin-top:.4rem;font-style:italic;"></p>
+          </div>
+          <label style="display:inline-flex;align-items:center;gap:8px;background:rgba(201,165,90,.1);border:1px solid var(--gold);color:var(--gold);padding:.5rem 1.2rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;min-height:40px;border-radius:2px;">
+            ♪ Escolher MP3
+            <input type="file" accept="audio/mp3,audio/mpeg,audio/*" style="display:none" id="ce-audio-input" onchange="handleAudio(event)"/>
+          </label>
+          <span id="ce-audio-status" style="font-size:.75rem;font-style:italic;margin-left:.8rem;"></span>
+          <p style="font-size:.68rem;color:rgba(245,237,224,.28);margin-top:.5rem;font-style:italic;line-height:1.5;">
+            Selecione o MP3 da música. Ele será enviado para o Cloudinary e tocará automaticamente ao abrir a carta.<br>
+            <strong style="color:rgba(201,165,90,.5);">Cloudinary Cloud Name: </strong><span id="cloudinary-name-display" style="color:rgba(201,165,90,.7);">não configurado</span>
+          </p>
+        </div>
+        <div class="edit-group">
+          <label class="edit-label">Link do YouTube ou Spotify (opcional)</label>
           <input class="edit-input" id="ce-spotify" placeholder="https://www.youtube.com/watch?v=... ou https://open.spotify.com/track/..." inputmode="url"/>
-          <p class="spotify-hint">Cole o link do YouTube da música — vai tocar automaticamente ao abrir a carta. Ou cole o Spotify para só abrir o app.</p>
+          <p class="spotify-hint">Opcional. Se tiver MP3 salvo acima, o MP3 tem prioridade e toca automaticamente.</p>
+        </div>
+        <div class="edit-group" style="padding:.8rem 1rem;background:rgba(192,97,107,.06);border:1px solid rgba(192,97,107,.2);border-radius:2px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="ce-links-off" style="width:18px;height:18px;accent-color:var(--rose);cursor:pointer;flex-shrink:0;"/>
+            <div>
+              <div style="font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:2px;">Desativar links externos</div>
+              <div style="font-size:.7rem;color:rgba(245,237,224,.4);font-style:italic;">Marque isso para tocar SOMENTE o MP3 — ignora YouTube e Spotify completamente.</div>
+            </div>
+          </label>
         </div>
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;">
           <button class="edit-save-btn" onclick="saveCard()">Salvar carta</button>
@@ -353,6 +378,23 @@ firebase.initializeApp({
 });
 const db = firebase.firestore();
 
+/* ═══════════════ CLOUDINARY CONFIG ═══════════════
+   1. Crie conta grátis em cloudinary.com
+   2. Vá em Settings > Upload > Add upload preset
+      - Signing Mode: Unsigned
+      - Folder: musicas
+      - Copie o nome do preset
+   3. Preencha abaixo com seu Cloud Name e Upload Preset
+══════════════════════════════════════════════════ */
+const CLOUDINARY_CLOUD  = 'dddlsjznb'; // Cloud Name
+const CLOUDINARY_PRESET = 'musicas';   // Upload Preset
+
+// Mostra cloud name na tela de edição
+window.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('cloudinary-name-display');
+  if (el) el.textContent = CLOUDINARY_CLOUD === 'SEU_CLOUD_NAME' ? 'não configurado' : CLOUDINARY_CLOUD;
+});
+
 // Coleções:
 // "config"   → doc "main"   : { biblioteca, hero }
 // "pictures" → doc "card-0" : { url: "data:image/jpeg;base64,..." }
@@ -374,7 +416,14 @@ async function loadFromDB() {
         .then(s => { if (s.exists && s.data().url) photoStore[i] = s.data().url; })
         .catch(() => {}),
       db.collection('musicas').doc('card-' + i).get()
-        .then(s => { if (s.exists && s.data().link) biblioteca[i].spotify = s.data().link; })
+        .then(s => {
+          if (s.exists) {
+            if (s.data().link)     biblioteca[i].spotify   = s.data().link;
+            if (s.data().tipo)     biblioteca[i].audioTipo = s.data().tipo;
+            if (s.data().filename) biblioteca[i].audioFile = s.data().filename;
+            if (s.data().linksOff !== undefined) biblioteca[i].linksOff = s.data().linksOff;
+          }
+        })
         .catch(() => {})
     ]).flat();
     await Promise.all(promises);
@@ -423,6 +472,74 @@ function compressImage(dataURL) {
     };
     img.src = dataURL;
   });
+}
+
+/* ═══════════════ ÁUDIO — upload Cloudinary + salva URL em musicas/card-{i} ═══════════════ */
+async function handleAudio(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const idx = selectedCardIdx;
+  if (idx === null || idx === undefined) { alert('Selecione uma carta primeiro'); return; }
+
+  const statusEl = document.getElementById('ce-audio-status');
+  const preview  = document.getElementById('ce-audio-preview');
+  const player   = document.getElementById('ce-audio-player');
+  const nameEl   = document.getElementById('ce-audio-name');
+
+  function setStatus(txt, cor) {
+    if (statusEl) { statusEl.textContent = txt; statusEl.style.color = cor; }
+    console.log('[Audio]', txt);
+  }
+
+  // Preview local imediato
+  if (preview) preview.style.display = 'block';
+  if (player)  player.src = URL.createObjectURL(file);
+  if (nameEl)  nameEl.textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
+  setStatus('⏳ Enviando para Cloudinary...', '#c9a55a');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    // SEM folder — ml_default não aceita pasta customizada
+
+    const uploadURL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/video/upload`;
+    console.log('[Audio] Upload URL:', uploadURL);
+    console.log('[Audio] Preset:', CLOUDINARY_PRESET);
+    console.log('[Audio] Cloud:', CLOUDINARY_CLOUD);
+
+    const res  = await fetch(uploadURL, { method: 'POST', body: formData });
+    const data = await res.json();
+
+    console.log('[Audio] Resposta HTTP:', res.status);
+    console.log('[Audio] Dados:', JSON.stringify(data));
+
+    if (data.secure_url) {
+      const audioURL = data.secure_url;
+      if (player) player.src = audioURL;
+
+      // Salva no Firebase coleção "musicas"
+      await db.collection('musicas').doc('card-' + idx).set({
+        link:     audioURL,
+        filename: file.name,
+        tipo:     'mp3'
+      });
+
+      // Atualiza estado local
+      biblioteca[idx].spotify   = audioURL;
+      biblioteca[idx].audioTipo = 'mp3';
+      biblioteca[idx].audioFile = file.name;
+
+      renderCards();
+      setStatus('✓ MP3 salvo! Pode abrir a carta.', '#1DB954');
+    } else {
+      const errMsg = data.error?.message || JSON.stringify(data);
+      setStatus('⚠ Cloudinary: ' + errMsg, '#c0616b');
+    }
+  } catch(err) {
+    setStatus('⚠ Erro de rede: ' + err.message, '#c0616b');
+    console.error('[Audio] Erro:', err);
+  }
 }
 
 /* ═══════════════ FOTO — salva em pictures/card-{i} ═══════════════ */
@@ -480,18 +597,18 @@ function handlePhoto(e, idx) {
 const SPG = `<svg viewBox="0 0 24 24"><path fill="white" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>`;
 
 let biblioteca = [
-  {mood:"Saudade",tag:"nostalgia",title:"Quando a distância aperta",quote:"Às vezes a saudade chega antes mesmo de você ir embora.",message:["Eu penso em você nas horas mais inesperadas. No cheiro do café pela manhã, no silêncio que acontece depois do riso — nesses pequenos nadas que agora carregam o teu rosto.","Saudade não é só falta. É amor que não cabe dentro do peito e transborda nos lugares onde você já esteve.","Fechar os olhos e te imaginar perto é quase tão bom quanto ter você aqui. Quase."],signature:"com toda a saudade do mundo",song:"Te Esperando",artist:"Luan Santana",spotify:"https://www.youtube.com/watch?v=ktvTqknDobU"},
-  {mood:"Amor tranquilo",tag:"cotidiano",title:"Amor que não precisa gritar",quote:"O mais bonito não é a paixão que queima — é a que aquece.",message:["Eu gosto de você do jeito quieto. Desse amor que é ficar do lado no silêncio e não precisar dizer nada porque a presença já diz tudo.","Você se tornou o meu lar favorito. Não o lugar — você.","Não preciso de grandes gestos. Só a sua mão na minha e a certeza de que amanhã você ainda vai estar aqui."],signature:"do jeito mais suave que existe",song:"Só Eu Sei",artist:"Jorge & Mateus",spotify:"https://www.youtube.com/watch?v=FDTNpJXCGOk"},
-  {mood:"Paixão",tag:"intensidade",title:"Aquele olhar que desequilibra",quote:"Você tem o poder ridículo de me deixar sem palavras.",message:["Tem horas que eu simplesmente paro e penso: como eu tive a sorte de te encontrar?","Quando você sorri pra mim do jeito que sorri, eu entendo todos os poetas que já escreveram sobre amor.","Não me canso de você. Esse é o resumo de tudo."],signature:"completamente perdido em você",song:"Pupila",artist:"ANAVITÓRIA & Vitor Kley",spotify:"https://www.youtube.com/watch?v=dHIS4QHKRDQ"},
-  {mood:"Boa noite, amor",tag:"intimidade",title:"A melhor hora do dia",quote:"Dormir do seu lado é o sonho que mais gosto de ter acordado.",message:["A noite tem um jeito de deixar tudo mais honesto. Eu só quero saber de você — do seu perfume no travesseiro, do seu respirar quietinho.","Você é minha parte favorita do dia. Não o amanhecer, não o fim da tarde — você.","Boa noite, meu amor."],signature:"até os sonhos te pertencem",song:"Online",artist:"Henrique & Juliano",spotify:"https://www.youtube.com/watch?v=z7nKF6pOr0c"},
-  {mood:"Depois da briga",tag:"reconciliação",title:"Quando o silêncio pesa demais",quote:"Brigar com quem a gente ama é a solidão mais barulhenta que existe.",message:["Eu posso estar errado. Você pode estar errado. Mas o que nenhum de nós dois pode estar é sem o outro.","Brigas passam. Palavras doem e passam. Mas o que sinto por você não passa.","Deixa eu te abraçar. Só deixa o abraço dizer o que as palavras ainda não conseguem."],signature:"teimosamente seu",song:"Cheia de Manias",artist:"Raça Negra",spotify:"https://www.youtube.com/watch?v=YnrE9XQWSBM"},
-  {mood:"Bom dia, meu bem",tag:"manhã",title:"O amanhecer que você merece",quote:"Acordar e saber que você existe já é motivo pro dia ser bom.",message:["Bom dia, você. Que hoje seja leve e a vida te trate com o carinho que você merece.","Pensei em você antes mesmo de abrir os olhos. Essa é a sua culpa, não a minha.","Vai lá enfrentar o dia. Tem alguém aqui torcendo por você."],signature:"já com saudade de você",song:"Vai na Fé",artist:"Vitor Kley",spotify:"https://www.youtube.com/watch?v=ING_IXFnNz8"},
-  {mood:"Distância",tag:"longe demais",title:"Amor que não cabe no mapa",quote:"O que é quilômetro perto da força do que sinto por você?",message:["A distância me ensinou que o amor não cabe em lugar nenhum — ele está nos dois ao mesmo tempo.","Cada mensagem sua é uma janela. Cada ligação, uma visita.","Um dia esse mapa vai ser só memória."],signature:"onde quer que eu esteja, é onde você está",song:"Fica (Ao Vivo)",artist:"ANAVITÓRIA",spotify:"https://www.youtube.com/watch?v=P6l5kyEVniA"},
-  {mood:"Te amo demais",tag:"intenso",title:"Quando não existe palavra suficiente",quote:'"Te amo" é bonito, mas é pequeno demais pro que eu sinto.',message:["Tem horas que o te amo não cabe. Precisaria de uma palavra nova.","Você entrou na minha vida como quem não quer nada e ficou como quem é dono do lugar.","Então: te amo. E o resto eu passo o resto da vida tentando te mostrar."],signature:"com um amor que ainda não tem nome",song:"Pra Sempre Com Você",artist:"Jorge & Mateus",spotify:"https://www.youtube.com/watch?v=YnJ5MsLBnGo"},
-  {mood:"Para sempre",tag:"compromisso",title:"O futuro que eu escolhi",quote:"Eu me decido por você todos os dias. Sem hesitar.",message:["Para sempre não é uma promessa de eternidade — é uma escolha que eu renovo toda manhã.","Eu quero envelhecer com você. Quero as histórias que a gente vai contar mil vezes.","Não tenho medo do tempo. Tenho você."],signature:"para sempre, e que seja verdade",song:"Para Sempre Comigo",artist:"Chitãozinho & Xororó",spotify:"https://www.youtube.com/watch?v=ACtF_cMCYSQ"},
-  {mood:"Ciúme delicioso",tag:"carinhoso",title:"Quando eu quero você só pra mim",quote:"Tem um ciúme que não machuca — só lembra o quanto importa.",message:["Eu fico com ciúme, tá? Mas não do jeito feio. Do jeito que lembra que você é especial.","Eu gosto de saber que você é meu. Meu no sentido bom — o de escolha, não de posse.","Pode falar pra todo mundo que é meu."],signature:"possessivamente carinhoso",song:"Meu Pedaço de Pecado",artist:"João Gomes",spotify:"https://www.youtube.com/watch?v=CuMlnLNhLdE"},
-  {mood:"Gratidão",tag:"amor pleno",title:"Obrigado por existir",quote:"Você não sabe o que fez com a minha vida só por aparecer nela.",message:["Antes de você, eu não sabia que o amor podia ser assim — leve e intenso ao mesmo tempo.","Obrigado pelos dias bons e pelos ruins também.","Eu não quero imaginar como seria sem você."],signature:"eternamente grato por você",song:"Saudade de Minha Terra",artist:"Michel Teló & Gusttavo Lima",spotify:"https://www.youtube.com/watch?v=Fkq7OJbvA3s"},
-  {mood:"Quando tudo é você",tag:"devoção",title:"Você virou o meu hábito favorito",quote:"Toda música boa me lembra de você. Toda coisa bonita também.",message:["Você virou filtro. Passa tudo por você antes de eu sentir.","Não é dependência. É cumplicidade. É ter alguém com quem dividir as coisas boas.","Continue sendo o meu hábito favorito."],signature:"viciado em você do jeito certo",song:"Saudade Sua",artist:"Gusttavo Lima",spotify:"https://www.youtube.com/watch?v=p5WlZHHEqI4"}
+  {mood:"Saudade",tag:"nostalgia",title:"Quando a distância aperta",quote:"Às vezes a saudade chega antes mesmo de você ir embora.",message:["Eu penso em você nas horas mais inesperadas. No cheiro do café pela manhã, no silêncio que acontece depois do riso — nesses pequenos nadas que agora carregam o teu rosto.","Saudade não é só falta. É amor que não cabe dentro do peito e transborda nos lugares onde você já esteve.","Fechar os olhos e te imaginar perto é quase tão bom quanto ter você aqui. Quase."],signature:"com toda a saudade do mundo",song:"Te Esperando",artist:"Luan Santana",spotify:""},
+  {mood:"Amor tranquilo",tag:"cotidiano",title:"Amor que não precisa gritar",quote:"O mais bonito não é a paixão que queima — é a que aquece.",message:["Eu gosto de você do jeito quieto. Desse amor que é ficar do lado no silêncio e não precisar dizer nada porque a presença já diz tudo.","Você se tornou o meu lar favorito. Não o lugar — você.","Não preciso de grandes gestos. Só a sua mão na minha e a certeza de que amanhã você ainda vai estar aqui."],signature:"do jeito mais suave que existe",song:"Só Eu Sei",artist:"Jorge & Mateus",spotify:""},
+  {mood:"Paixão",tag:"intensidade",title:"Aquele olhar que desequilibra",quote:"Você tem o poder ridículo de me deixar sem palavras.",message:["Tem horas que eu simplesmente paro e penso: como eu tive a sorte de te encontrar?","Quando você sorri pra mim do jeito que sorri, eu entendo todos os poetas que já escreveram sobre amor.","Não me canso de você. Esse é o resumo de tudo."],signature:"completamente perdido em você",song:"Pupila",artist:"ANAVITÓRIA & Vitor Kley",spotify:""},
+  {mood:"Boa noite, amor",tag:"intimidade",title:"A melhor hora do dia",quote:"Dormir do seu lado é o sonho que mais gosto de ter acordado.",message:["A noite tem um jeito de deixar tudo mais honesto. Eu só quero saber de você — do seu perfume no travesseiro, do seu respirar quietinho.","Você é minha parte favorita do dia. Não o amanhecer, não o fim da tarde — você.","Boa noite, meu amor."],signature:"até os sonhos te pertencem",song:"Online",artist:"Henrique & Juliano",spotify:""},
+  {mood:"Depois da briga",tag:"reconciliação",title:"Quando o silêncio pesa demais",quote:"Brigar com quem a gente ama é a solidão mais barulhenta que existe.",message:["Eu posso estar errado. Você pode estar errado. Mas o que nenhum de nós dois pode estar é sem o outro.","Brigas passam. Palavras doem e passam. Mas o que sinto por você não passa.","Deixa eu te abraçar. Só deixa o abraço dizer o que as palavras ainda não conseguem."],signature:"teimosamente seu",song:"Cheia de Manias",artist:"Raça Negra",spotify:""},
+  {mood:"Bom dia, meu bem",tag:"manhã",title:"O amanhecer que você merece",quote:"Acordar e saber que você existe já é motivo pro dia ser bom.",message:["Bom dia, você. Que hoje seja leve e a vida te trate com o carinho que você merece.","Pensei em você antes mesmo de abrir os olhos. Essa é a sua culpa, não a minha.","Vai lá enfrentar o dia. Tem alguém aqui torcendo por você."],signature:"já com saudade de você",song:"Vai na Fé",artist:"Vitor Kley",spotify:""},
+  {mood:"Distância",tag:"longe demais",title:"Amor que não cabe no mapa",quote:"O que é quilômetro perto da força do que sinto por você?",message:["A distância me ensinou que o amor não cabe em lugar nenhum — ele está nos dois ao mesmo tempo.","Cada mensagem sua é uma janela. Cada ligação, uma visita.","Um dia esse mapa vai ser só memória."],signature:"onde quer que eu esteja, é onde você está",song:"Fica (Ao Vivo)",artist:"ANAVITÓRIA",spotify:""},
+  {mood:"Te amo demais",tag:"intenso",title:"Quando não existe palavra suficiente",quote:'"Te amo" é bonito, mas é pequeno demais pro que eu sinto.',message:["Tem horas que o te amo não cabe. Precisaria de uma palavra nova.","Você entrou na minha vida como quem não quer nada e ficou como quem é dono do lugar.","Então: te amo. E o resto eu passo o resto da vida tentando te mostrar."],signature:"com um amor que ainda não tem nome",song:"Pra Sempre Com Você",artist:"Jorge & Mateus",spotify:""},
+  {mood:"Para sempre",tag:"compromisso",title:"O futuro que eu escolhi",quote:"Eu me decido por você todos os dias. Sem hesitar.",message:["Para sempre não é uma promessa de eternidade — é uma escolha que eu renovo toda manhã.","Eu quero envelhecer com você. Quero as histórias que a gente vai contar mil vezes.","Não tenho medo do tempo. Tenho você."],signature:"para sempre, e que seja verdade",song:"Para Sempre Comigo",artist:"Chitãozinho & Xororó",spotify:""},
+  {mood:"Ciúme delicioso",tag:"carinhoso",title:"Quando eu quero você só pra mim",quote:"Tem um ciúme que não machuca — só lembra o quanto importa.",message:["Eu fico com ciúme, tá? Mas não do jeito feio. Do jeito que lembra que você é especial.","Eu gosto de saber que você é meu. Meu no sentido bom — o de escolha, não de posse.","Pode falar pra todo mundo que é meu."],signature:"possessivamente carinhoso",song:"Meu Pedaço de Pecado",artist:"João Gomes",spotify:""},
+  {mood:"Gratidão",tag:"amor pleno",title:"Obrigado por existir",quote:"Você não sabe o que fez com a minha vida só por aparecer nela.",message:["Antes de você, eu não sabia que o amor podia ser assim — leve e intenso ao mesmo tempo.","Obrigado pelos dias bons e pelos ruins também.","Eu não quero imaginar como seria sem você."],signature:"eternamente grato por você",song:"Saudade de Minha Terra",artist:"Michel Teló & Gusttavo Lima",spotify:""},
+  {mood:"Quando tudo é você",tag:"devoção",title:"Você virou o meu hábito favorito",quote:"Toda música boa me lembra de você. Toda coisa bonita também.",message:["Você virou filtro. Passa tudo por você antes de eu sentir.","Não é dependência. É cumplicidade. É ter alguém com quem dividir as coisas boas.","Continue sendo o meu hábito favorito."],signature:"viciado em você do jeito certo",song:"Saudade Sua",artist:"Gusttavo Lima",spotify:""}
 ];
 
 let heroData = {
@@ -562,63 +679,69 @@ function getYouTubeID(url) {
 function openModal(idx) {
   const item  = biblioteca[idx];
   const photo = photoStore[idx];
-  const link  = (item.spotify || '').trim();
-  const ytID  = getYouTubeID(link);
-  const isSp  = !ytID && link.includes('spotify.com');
 
-  // ── Player minimalista ──
-  // YouTube: iframe invisível (só áudio, controls ocultos) + barra de info
-  // Spotify: sem autoplay garantido, só botão
+  // ── Decide qual player mostrar ──
+  // Prioridade: MP3 (Cloudinary) > YouTube > Spotify > nada
+  // Um item é MP3 se vier da coleção musicas com tipo='mp3'
+  // A URL do Cloudinary contém 'res.cloudinary.com'
+  const musicLink  = (item.spotify   || '').trim();
+  const musicTipo  = (item.audioTipo || '').trim();
+  const linksOff   = item.linksOff === true;
+
+  const isMp3 = musicTipo === 'mp3' || musicLink.includes('res.cloudinary.com');
+  const ytID  = (!isMp3 && !linksOff) ? getYouTubeID(musicLink) : null;
+  const isSp  = (!isMp3 && !linksOff && !ytID && musicLink.includes('spotify.com'));
+
   let playerHTML = '';
-  if (ytID) {
-    // Iframe do YouTube — height=0 visualmente, mas o áudio toca
-    // A barra bonita fica em cima, o iframe fica colapsado
+
+  if (isMp3 && musicLink) {
+    // MP3 nativo — toca direto, sem anúncio, sem conflito
     playerHTML = `
-      <div style="margin-top:1.2rem;">
-        <!-- Player visual minimalista -->
-        <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.2);border-radius:2px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      <div style="margin-top:1.2rem;padding:1rem;background:rgba(201,165,90,.07);border:1px solid rgba(201,165,90,.25);border-radius:2px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.8rem;">
+          <div style="width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 4s linear infinite;">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="var(--ink)"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:2px;">♪ tocando agora</div>
+            <div style="font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,165,90,.8);margin-bottom:2px;">♪ tocando agora</div>
             <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
             <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
           </div>
-          <a href="${link}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
         </div>
-        <!-- iframe colapsado — toca o áudio -->
-        <iframe
-          src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
-          width="0" height="0"
-          frameborder="0"
-          allow="autoplay; encrypted-media"
-          style="position:absolute;opacity:0;pointer-events:none;">
-        </iframe>
+        <audio autoplay controls style="width:100%;height:36px;accent-color:#8B6914;">
+          <source src="${musicLink}" type="audio/mpeg">
+        </audio>
       </div>`;
+
+  } else if (ytID) {
+    playerHTML = `
+      <div style="margin-top:1.2rem;">
+        <div style="display:flex;align-items:center;gap:10px;padding:.85rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.18);border-radius:2px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="white"><path d="M10 15l5.19-3L10 9v6z"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:1px;">♪ tocando agora</div>
+            <div style="font-size:.86rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+            <div style="font-size:.7rem;color:var(--muted);">${item.artist}</div>
+          </div>
+          <a href="${musicLink}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
+        </div>
+        <iframe src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
+          width="0" height="0" frameborder="0" allow="autoplay; encrypted-media"
+          style="position:absolute;opacity:0;pointer-events:none;"></iframe>
+      </div>`;
+
   } else if (isSp) {
     try {
-      const u = new URL(link);
+      const u = new URL(musicLink);
       if (/^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
         playerHTML = `
           <div style="margin-top:1.2rem;">
-            <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(29,185,84,.06);border:1px solid rgba(29,185,84,.2);border-radius:2px;">
-              <div style="width:32px;height:32px;border-radius:50%;background:#1DB954;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(29,185,84,.8);margin-bottom:2px;">Spotify</div>
-                <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
-                <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
-              </div>
-              <a href="${link}" target="_blank" rel="noopener" style="color:rgba(29,185,84,.8);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
-            </div>
-            <iframe
-              src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
+            <iframe src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
               width="100%" height="80" frameborder="0"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              style="display:block;border:none;border-radius:2px;margin-top:.5rem;">
-            </iframe>
+              style="display:block;border:none;border-radius:2px;"></iframe>
           </div>`;
       }
     } catch(e) {}
@@ -786,6 +909,25 @@ function selectCard(idx) {
   }
   if (status) status.textContent = '';
 
+  // Mostra preview de áudio se houver MP3 salvo
+  const audioPreview = document.getElementById('ce-audio-preview');
+  const audioPlayer  = document.getElementById('ce-audio-player');
+  const audioName    = document.getElementById('ce-audio-name');
+  const audioStatus  = document.getElementById('ce-audio-status');
+  if (audioStatus) audioStatus.textContent = '';
+  if (item.audioTipo === 'mp3' && item.spotify) {
+    if (audioPreview) audioPreview.style.display = 'block';
+    if (audioPlayer)  audioPlayer.src = item.spotify;
+    if (audioName)    audioName.textContent = item.audioFile || 'MP3 salvo';
+  } else {
+    if (audioPreview) { audioPreview.style.display = 'none'; }
+    if (audioPlayer)  audioPlayer.src = '';
+  }
+
+  // Preenche checkbox desativar links
+  const linksOffEl = document.getElementById('ce-links-off');
+  if (linksOffEl) linksOffEl.checked = item.linksOff === true;
+
   document.getElementById('card-edit-form').style.display = 'block';
   setTimeout(() => document.getElementById('card-edit-form').scrollIntoView({behavior:'smooth',block:'start'}), 100);
 }
@@ -801,6 +943,7 @@ function addMsgField(val='') {
 async function saveCard() {
   if (selectedCardIdx === null) return;
   const musicLink = document.getElementById('ce-spotify').value.trim();
+  const linksOff  = document.getElementById('ce-links-off')?.checked === true;
   biblioteca[selectedCardIdx] = {
     mood:      document.getElementById('ce-mood').value,
     tag:       document.getElementById('ce-tag').value,
@@ -810,19 +953,20 @@ async function saveCard() {
     signature: document.getElementById('ce-signature').value,
     song:      document.getElementById('ce-song').value,
     artist:    document.getElementById('ce-artist').value,
-    spotify:   musicLink
+    spotify:   musicLink,
+    linksOff:  linksOff
   };
   renderCards();
   buildCardSelector();
   // Salva dados na coleção config/main
   saveToDB();
-  // Salva link da música em coleção separada "musicas"
-  if (musicLink) {
-    try {
-      await db.collection('musicas').doc('card-' + selectedCardIdx).set({ link: musicLink });
-      console.log('Musica salva: musicas/card-' + selectedCardIdx);
-    } catch(e) { console.error('Erro salvar musica:', e.message); }
-  }
+  // Salva link e configurações na coleção "musicas"
+  try {
+    const musicaData = { linksOff };
+    if (musicLink) musicaData.link = musicLink;
+    await db.collection('musicas').doc('card-' + selectedCardIdx).set(musicaData, { merge: true });
+    console.log('Musica salva: musicas/card-' + selectedCardIdx, musicaData);
+  } catch(e) { console.error('Erro salvar musica:', e.message); }
   showSaved('card-saved');
 }
 

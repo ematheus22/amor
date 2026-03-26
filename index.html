@@ -58,6 +58,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .card-photo-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(201,165,90,.3);}
 .card-photo-placeholder span{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;}
 .card-photo-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(12,9,8,.82) 100%);pointer-events:none;}
+.card-photo-upload{position:absolute;bottom:8px;right:8px;background:rgba(201,165,90,.88);border:none;color:var(--ink);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;cursor:pointer;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;border-radius:1px;min-height:30px;}
+.photo-status{position:absolute;top:8px;left:8px;font-size:.62rem;font-family:'Cormorant Garamond',Georgia,serif;background:rgba(12,9,8,.82);padding:3px 8px;border-radius:1px;display:none;}
 
 .card-body{padding:1.3rem 1.4rem 1.2rem;}
 .card-mood{font-size:.58rem;letter-spacing:.38em;text-transform:uppercase;color:var(--gold);margin-bottom:.4rem;}
@@ -65,15 +67,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .card-title{font-family:'IM Fell English',Georgia,serif;font-size:1.3rem;font-style:italic;color:var(--cream);margin-bottom:.6rem;line-height:1.3;}
 .card-quote{font-size:.88rem;font-style:italic;color:rgba(245,237,224,.48);line-height:1.65;margin-bottom:1rem;border-left:2px solid rgba(201,165,90,.25);padding-left:.8rem;}
 .card-song{display:flex;align-items:center;gap:8px;padding-top:.9rem;border-top:1px solid rgba(201,165,90,.1);}
-.card-song-icon{width:26px;height:26px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.card-song-icon svg{width:11px;height:11px;fill:var(--ink);}
+.card-song-icon{width:26px;height:26px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.card-song-icon svg{width:11px;height:11px;fill:white;}
 .card-song-name{font-size:.78rem;font-weight:600;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .card-song-artist{font-size:.68rem;color:var(--muted);margin-top:1px;}
-.card-song-noaudio{font-size:.7rem;font-style:italic;color:rgba(245,237,224,.2);}
 .card-action{margin-top:1rem;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Cormorant Garamond',Georgia,serif;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,165,90,.3);padding:.55rem 1rem;background:transparent;cursor:pointer;min-height:44px;}
 .card-action:active{background:rgba(201,165,90,.12);}
 
-/* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s ease;}
 @media(min-width:600px){.modal-overlay{align-items:center;padding:1.5rem;}}
 .modal-overlay.open{opacity:1;pointer-events:all;}
@@ -99,29 +99,17 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .modal-message{font-size:.97rem;line-height:1.85;color:#2d1e10;font-style:italic;margin-bottom:1.4rem;}
 .modal-message p{margin-bottom:.85rem;}
 .modal-signature{font-family:'Petit Formal Script',cursive;font-size:1.5rem;color:var(--wine);margin-bottom:1.4rem;text-align:right;}
+.modal-spotify-link{display:flex;align-items:center;gap:.9rem;background:rgba(29,185,84,.07);border:1px solid rgba(29,185,84,.25);padding:.85rem 1rem;text-decoration:none;border-radius:2px;}
+.modal-spotify-logo{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.modal-spotify-logo svg{width:16px;height:16px;fill:white;}
+.modal-spotify-info{flex:1;min-width:0;}
+.modal-spotify-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--green);margin-bottom:2px;}
+.modal-spotify-song{font-size:.9rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-spotify-artist{font-size:.75rem;color:var(--muted);}
+.modal-spotify-arrow{font-size:1rem;color:var(--green);flex-shrink:0;}
+.modal-embed{margin-top:1rem;border-radius:4px;overflow:hidden;}
+.modal-embed iframe{display:block;border:none;width:100%;height:80px;}
 
-/* ── PLAYER DE MÚSICA ── */
-.music-player{margin-top:1.2rem;padding:1.1rem 1rem;background:rgba(201,165,90,.07);border:1px solid rgba(201,165,90,.25);border-radius:2px;}
-.music-player-header{display:flex;align-items:center;gap:12px;margin-bottom:1rem;}
-.music-vinyl{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.music-vinyl.spinning{animation:spin 3s linear infinite;}
-.music-vinyl svg{width:12px;height:12px;fill:var(--ink);}
-.music-info{flex:1;min-width:0;}
-.music-label{font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(201,165,90,.75);margin-bottom:2px;}
-.music-song{font-size:.9rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.music-artist{font-size:.73rem;color:var(--muted);}
-
-/* Player nativo — reset visual para ficar bonito em iOS/Android */
-.music-audio{width:100%;height:40px;display:block;border-radius:2px;}
-/* iOS custom tint */
-.music-audio::-webkit-media-controls-panel{background-color:rgba(242,232,212,.95);}
-
-/* Botão play manual para iOS (autoplay bloqueado) */
-.music-play-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(201,165,90,.12);border:1px solid rgba(201,165,90,.4);color:var(--ink);padding:.7rem 1rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-radius:2px;min-height:44px;margin-top:.7rem;}
-.music-play-btn:active{background:rgba(201,165,90,.25);}
-.music-no-audio{font-size:.78rem;font-style:italic;color:rgba(42,31,20,.35);text-align:center;padding:.5rem 0;}
-
-/* ── QR CODE ── */
 .qr-section{position:relative;z-index:1;padding:3rem 1.2rem 5rem;border-top:1px solid rgba(201,165,90,.1);}
 .qr-inner{max-width:480px;margin:0 auto;text-align:center;}
 .qr-eyebrow{font-size:.65rem;letter-spacing:.38em;text-transform:uppercase;color:var(--gold);margin-bottom:.7rem;}
@@ -139,7 +127,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .qr-dl{display:inline-flex;align-items:center;gap:6px;font-family:'Cormorant Garamond',Georgia,serif;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,165,90,.32);padding:.5rem 1.1rem;text-decoration:none;min-height:44px;}
 .qr-url-hint{font-size:.75rem;color:rgba(245,237,224,.3);font-style:italic;word-break:break-all;max-width:300px;text-align:center;}
 
-/* ── PIN ── */
+/* PIN */
 .pin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
 .pin-overlay.open{opacity:1;pointer-events:all;}
 .pin-box{background:var(--parchment);color:var(--ink);padding:2.5rem 2rem;max-width:320px;width:90%;text-align:center;border-radius:4px;}
@@ -155,7 +143,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .pin-key.del{font-size:.95rem;color:var(--muted);}
 .pin-cancel{margin-top:1rem;background:none;border:none;color:rgba(42,31,20,.35);font-family:'Cormorant Garamond',Georgia,serif;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;}
 
-/* ── EDITOR ── */
+/* EDIT */
 .edit-bar{position:relative;z-index:1;padding:2.5rem 1.2rem;border-top:1px solid rgba(201,165,90,.07);text-align:center;}
 .edit-toggle{background:none;border:1px solid rgba(201,165,90,.18);color:rgba(245,237,224,.3);padding:.55rem 1.5rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.75rem;letter-spacing:.28em;text-transform:uppercase;cursor:pointer;min-height:44px;}
 .edit-panel{display:none;background:rgba(255,255,255,.025);border:1px solid rgba(201,165,90,.13);max-width:860px;margin:1.2rem auto 0;padding:1.5rem 1.2rem;}
@@ -188,6 +176,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 .edit-msg-row .edit-textarea{flex:1;min-height:65px;}
 .edit-msg-del{background:none;border:1px solid rgba(192,97,107,.28);color:var(--rose);width:36px;height:36px;flex-shrink:0;cursor:pointer;font-size:1rem;border-radius:2px;}
 .edit-msg-add{background:none;border:1px solid rgba(201,165,90,.22);color:rgba(201,165,90,.55);padding:.4rem .85rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;margin-top:.3rem;min-height:40px;}
+.spotify-hint{font-size:.68rem;color:rgba(245,237,224,.28);margin-top:.35rem;font-style:italic;line-height:1.5;}
 
 footer{position:relative;z-index:1;text-align:center;padding:2rem 1.2rem calc(2rem + var(--safe-bot));border-top:1px solid rgba(201,165,90,.06);}
 footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
@@ -257,8 +246,6 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
       <button class="edit-tab active" onclick="switchTab('tab-hero',this)">Página inicial</button>
       <button class="edit-tab" onclick="switchTab('tab-cards',this)">Cartas &amp; Músicas</button>
     </div>
-
-    <!-- TAB: HERO -->
     <div class="edit-tab-content active" id="tab-hero">
       <div class="edit-row">
         <div class="edit-group"><label class="edit-label">Título</label><input class="edit-input" id="e-title" value="Nossa Biblioteca"/></div>
@@ -271,8 +258,6 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
         <span class="edit-saved-msg" id="hero-saved">✓ Salvo!</span>
       </div>
     </div>
-
-    <!-- TAB: CARTAS -->
     <div class="edit-tab-content" id="tab-cards">
       <p style="font-size:.78rem;font-style:italic;color:rgba(245,237,224,.35);margin-bottom:.9rem;">Selecione uma carta:</p>
       <div class="card-selector" id="card-selector"></div>
@@ -301,41 +286,25 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
           <span id="ce-photo-status" style="font-size:.75rem;font-style:italic;margin-left:.8rem;"></span>
         </div>
         <div class="edit-row">
-          <div class="edit-group"><label class="edit-label">Música (nome)</label><input class="edit-input" id="ce-song"/></div>
+          <div class="edit-group"><label class="edit-label">Música</label><input class="edit-input" id="ce-song"/></div>
           <div class="edit-group"><label class="edit-label">Artista</label><input class="edit-input" id="ce-artist"/></div>
         </div>
-
-        <!-- UPLOAD MP3 -->
         <div class="edit-group">
-          <label class="edit-label">Arquivo MP3 da música</label>
-          <div id="ce-audio-preview" style="display:none;padding:.7rem 1rem;background:rgba(201,165,90,.06);border:1px solid rgba(201,165,90,.2);border-radius:2px;margin-bottom:.6rem;">
-            <audio id="ce-audio-player" controls style="width:100%;height:32px;accent-color:#8B6914;"></audio>
-            <p id="ce-audio-name" style="font-size:.7rem;color:rgba(245,237,224,.45);margin-top:.4rem;font-style:italic;"></p>
-          </div>
-          <label style="display:inline-flex;align-items:center;gap:8px;background:rgba(201,165,90,.1);border:1px solid var(--gold);color:var(--gold);padding:.5rem 1.2rem;font-family:'Cormorant Garamond',Georgia,serif;font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;min-height:40px;border-radius:2px;">
-            ♪ Escolher MP3
-            <input type="file" accept="audio/mp3,audio/mpeg,audio/*" style="display:none" id="ce-audio-input" onchange="handleAudio(event)"/>
-          </label>
-          <span id="ce-audio-status" style="font-size:.75rem;font-style:italic;margin-left:.8rem;color:rgba(245,237,224,.5);"></span>
-          <p style="font-size:.68rem;color:rgba(245,237,224,.28);margin-top:.5rem;font-style:italic;line-height:1.5;">
-            Selecione o MP3. Ele será enviado ao Cloudinary e tocará ao abrir a carta.<br>
-            <strong style="color:rgba(201,165,90,.5);">Cloud: </strong><span id="cloudinary-name-display" style="color:rgba(201,165,90,.7);">carregando...</span>
-          </p>
+          <label class="edit-label">Link do YouTube (para tocar) ou Spotify (para abrir)</label>
+          <input class="edit-input" id="ce-spotify" placeholder="https://www.youtube.com/watch?v=... ou https://open.spotify.com/track/..." inputmode="url"/>
+          <p class="spotify-hint">Cole o link do YouTube da música — vai tocar automaticamente ao abrir a carta. Ou cole o Spotify para só abrir o app.</p>
         </div>
-
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;">
           <button class="edit-save-btn" onclick="saveCard()">Salvar carta</button>
           <span class="edit-saved-msg" id="card-saved">✓ Salvo!</span>
         </div>
       </div>
     </div>
-
   </div>
 </div>
 
 <footer><p>Nossa história, nossas músicas &nbsp;✦&nbsp; Eychila &amp; Matheus</p></footer>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal" id="modal-box">
     <div class="modal-handle"><div class="modal-handle-bar"></div></div>
@@ -344,7 +313,6 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
   </div>
 </div>
 
-<!-- PIN -->
 <div class="pin-overlay" id="pin-overlay">
   <div class="pin-box">
     <div class="pin-title">Área restrita</div>
@@ -374,9 +342,7 @@ footer p{font-style:italic;color:rgba(245,237,224,.18);font-size:.82rem;}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-/* ═══════════════════════════════════════════
-   FIREBASE CONFIG
-═══════════════════════════════════════════ */
+/* ═══════════════ FIREBASE ═══════════════ */
 firebase.initializeApp({
   apiKey:            "AIzaSyCKrt5WZ1klsUa679gGNO9x7j4q9_Nfzqk",
   authDomain:        "amor-c6306.firebaseapp.com",
@@ -387,69 +353,14 @@ firebase.initializeApp({
 });
 const db = firebase.firestore();
 
-/* ═══════════════════════════════════════════
-   CLOUDINARY CONFIG
-   Coleção "musicas_mp3" → doc "card-{i}"
-   { url, filename, song, artist }
-═══════════════════════════════════════════ */
-const CLOUDINARY_CLOUD  = 'dddlsjznb';
-const CLOUDINARY_PRESET = 'musicas';
+// Coleções:
+// "config"   → doc "main"   : { biblioteca, hero }
+// "pictures" → doc "card-0" : { url: "data:image/jpeg;base64,..." }
+//                doc "card-1" : { url: "..." }   etc.
 
-// Exibe cloud name no painel de edição
-window.addEventListener('DOMContentLoaded', () => {
-  const el = document.getElementById('cloudinary-name-display');
-  if (el) el.textContent = CLOUDINARY_CLOUD;
-});
-
-/* ═══════════════════════════════════════════
-   ESTRUTURA DE DADOS
-   Coleções Firebase:
-   - config/main     → { biblioteca, hero }
-   - pictures/card-N → { url: base64 }
-   - musicas_mp3/card-N → { url, filename }   ← SOMENTE MP3
-═══════════════════════════════════════════ */
-
-// Estado de áudio por carta (url do Cloudinary)
-// Separado da biblioteca para não causar conflito no saveCard
-const audioStore = {}; // audioStore[i] = { url, filename }
-const photoStore = {};
-
-let selectedCardIdx = null;
-
-/* ═══════════════════════════════════════════
-   DADOS DEFAULT DA BIBLIOTECA
-═══════════════════════════════════════════ */
-let biblioteca = [
-  {mood:"Saudade",tag:"nostalgia",title:"Quando a distância aperta",quote:"Às vezes a saudade chega antes mesmo de você ir embora.",message:["Eu penso em você nas horas mais inesperadas. No cheiro do café pela manhã, no silêncio que acontece depois do riso — nesses pequenos nadas que agora carregam o teu rosto.","Saudade não é só falta. É amor que não cabe dentro do peito e transborda nos lugares onde você já esteve.","Fechar os olhos e te imaginar perto é quase tão bom quanto ter você aqui. Quase."],signature:"com toda a saudade do mundo",song:"Te Esperando",artist:"Luan Santana"},
-  {mood:"Amor tranquilo",tag:"cotidiano",title:"Amor que não precisa gritar",quote:"O mais bonito não é a paixão que queima — é a que aquece.",message:["Eu gosto de você do jeito quieto. Desse amor que é ficar do lado no silêncio e não precisar dizer nada porque a presença já diz tudo.","Você se tornou o meu lar favorito. Não o lugar — você.","Não preciso de grandes gestos. Só a sua mão na minha e a certeza de que amanhã você ainda vai estar aqui."],signature:"do jeito mais suave que existe",song:"Só Eu Sei",artist:"Jorge & Mateus"},
-  {mood:"Paixão",tag:"intensidade",title:"Aquele olhar que desequilibra",quote:"Você tem o poder ridículo de me deixar sem palavras.",message:["Tem horas que eu simplesmente paro e penso: como eu tive a sorte de te encontrar?","Quando você sorri pra mim do jeito que sorri, eu entendo todos os poetas que já escreveram sobre amor.","Não me canso de você. Esse é o resumo de tudo."],signature:"completamente perdido em você",song:"Pupila",artist:"ANAVITÓRIA & Vitor Kley"},
-  {mood:"Boa noite, amor",tag:"intimidade",title:"A melhor hora do dia",quote:"Dormir do seu lado é o sonho que mais gosto de ter acordado.",message:["A noite tem um jeito de deixar tudo mais honesto. Eu só quero saber de você — do seu perfume no travesseiro, do seu respirar quietinho.","Você é minha parte favorita do dia. Não o amanhecer, não o fim da tarde — você.","Boa noite, meu amor."],signature:"até os sonhos te pertencem",song:"Online",artist:"Henrique & Juliano"},
-  {mood:"Depois da briga",tag:"reconciliação",title:"Quando o silêncio pesa demais",quote:"Brigar com quem a gente ama é a solidão mais barulhenta que existe.",message:["Eu posso estar errado. Você pode estar errado. Mas o que nenhum de nós dois pode estar é sem o outro.","Brigas passam. Palavras doem e passam. Mas o que sinto por você não passa.","Deixa eu te abraçar. Só deixa o abraço dizer o que as palavras ainda não conseguem."],signature:"teimosamente seu",song:"Cheia de Manias",artist:"Raça Negra"},
-  {mood:"Bom dia, meu bem",tag:"manhã",title:"O amanhecer que você merece",quote:"Acordar e saber que você existe já é motivo pro dia ser bom.",message:["Bom dia, você. Que hoje seja leve e a vida te trate com o carinho que você merece.","Pensei em você antes mesmo de abrir os olhos. Essa é a sua culpa, não a minha.","Vai lá enfrentar o dia. Tem alguém aqui torcendo por você."],signature:"já com saudade de você",song:"Vai na Fé",artist:"Vitor Kley"},
-  {mood:"Distância",tag:"longe demais",title:"Amor que não cabe no mapa",quote:"O que é quilômetro perto da força do que sinto por você?",message:["A distância me ensinou que o amor não cabe em lugar nenhum — ele está nos dois ao mesmo tempo.","Cada mensagem sua é uma janela. Cada ligação, uma visita.","Um dia esse mapa vai ser só memória."],signature:"onde quer que eu esteja, é onde você está",song:"Fica (Ao Vivo)",artist:"ANAVITÓRIA"},
-  {mood:"Te amo demais",tag:"intenso",title:"Quando não existe palavra suficiente",quote:'"Te amo" é bonito, mas é pequeno demais pro que eu sinto.',message:["Tem horas que o te amo não cabe. Precisaria de uma palavra nova.","Você entrou na minha vida como quem não quer nada e ficou como quem é dono do lugar.","Então: te amo. E o resto eu passo o resto da vida tentando te mostrar."],signature:"com um amor que ainda não tem nome",song:"Pra Sempre Com Você",artist:"Jorge & Mateus"},
-  {mood:"Para sempre",tag:"compromisso",title:"O futuro que eu escolhi",quote:"Eu me decido por você todos os dias. Sem hesitar.",message:["Para sempre não é uma promessa de eternidade — é uma escolha que eu renovo toda manhã.","Eu quero envelhecer com você. Quero as histórias que a gente vai contar mil vezes.","Não tenho medo do tempo. Tenho você."],signature:"para sempre, e que seja verdade",song:"Para Sempre Comigo",artist:"Chitãozinho & Xororó"},
-  {mood:"Ciúme delicioso",tag:"carinhoso",title:"Quando eu quero você só pra mim",quote:"Tem um ciúme que não machuca — só lembra o quanto importa.",message:["Eu fico com ciúme, tá? Mas não do jeito feio. Do jeito que lembra que você é especial.","Eu gosto de saber que você é meu. Meu no sentido bom — o de escolha, não de posse.","Pode falar pra todo mundo que é meu."],signature:"possessivamente carinhoso",song:"Meu Pedaço de Pecado",artist:"João Gomes"},
-  {mood:"Gratidão",tag:"amor pleno",title:"Obrigado por existir",quote:"Você não sabe o que fez com a minha vida só por aparecer nela.",message:["Antes de você, eu não sabia que o amor podia ser assim — leve e intenso ao mesmo tempo.","Obrigado pelos dias bons e pelos ruins também.","Eu não quero imaginar como seria sem você."],signature:"eternamente grato por você",song:"Saudade de Minha Terra",artist:"Michel Teló & Gusttavo Lima"},
-  {mood:"Quando tudo é você",tag:"devoção",title:"Você virou o meu hábito favorito",quote:"Toda música boa me lembra de você. Toda coisa bonita também.",message:["Você virou filtro. Passa tudo por você antes de eu sentir.","Não é dependência. É cumplicidade. É ter alguém com quem dividir as coisas boas.","Continue sendo o meu hábito favorito."],signature:"viciado em você do jeito certo",song:"Saudade Sua",artist:"Gusttavo Lima"}
-];
-
-let heroData = {
-  title:"Nossa<br>Biblioteca", names:"Eychila & Matheus",
-  eyebrow:"✦  uma coleção para dois  ✦",
-  desc:"Escolha um estado de alma. Veja a foto de vocês. Leia a carta. Deixe a música te levar."
-};
-
-/* ═══════════════════════════════════════════
-   CARREGA DADOS DO FIREBASE
-   Ordem:
-   1. config/main   → biblioteca + hero
-   2. pictures/*    → fotos
-   3. musicas_mp3/* → urls dos mp3 (separado!)
-═══════════════════════════════════════════ */
 async function loadFromDB() {
   try {
-    // 1. Biblioteca + hero
+    // 1. Carrega biblioteca + hero
     const snap = await db.collection('config').doc('main').get();
     if (snap.exists) {
       const d = snap.data();
@@ -457,45 +368,30 @@ async function loadFromDB() {
       if (d.hero) heroData = d.hero;
     }
 
-    // 2. Fotos e MP3s em paralelo
+    // 2. Carrega fotos e músicas em paralelo
     const promises = biblioteca.map((_, i) => [
-      // Fotos
       db.collection('pictures').doc('card-' + i).get()
-        .then(s => {
-          if (s.exists && s.data().url) photoStore[i] = s.data().url;
-        })
+        .then(s => { if (s.exists && s.data().url) photoStore[i] = s.data().url; })
         .catch(() => {}),
-      // MP3s — coleção DEDICADA "musicas_mp3"
-      db.collection('musicas_mp3').doc('card-' + i).get()
-        .then(s => {
-          if (s.exists && s.data().url) {
-            audioStore[i] = { url: s.data().url, filename: s.data().filename || '' };
-          }
-        })
+      db.collection('musicas').doc('card-' + i).get()
+        .then(s => { if (s.exists && s.data().link) biblioteca[i].spotify = s.data().link; })
         .catch(() => {})
     ]).flat();
-
     await Promise.all(promises);
 
     applyHeroToDOM();
     renderCards();
     buildCardSelector();
-    console.log('✅ Carregado. Fotos:', Object.keys(photoStore).length, '| MP3s:', Object.keys(audioStore).length);
+    console.log('✅ Carregado. Fotos:', Object.keys(photoStore).length);
   } catch(e) {
     console.error('❌ loadFromDB:', e.code, e.message);
   }
 }
 
 async function saveToDB() {
-  // Salva APENAS os campos de texto da biblioteca (sem urls de áudio, que ficam em musicas_mp3)
-  const bibClean = biblioteca.map(item => ({
-    mood: item.mood, tag: item.tag, title: item.title,
-    quote: item.quote, message: item.message,
-    signature: item.signature, song: item.song, artist: item.artist
-  }));
   try {
     await db.collection('config').doc('main').set(
-      { biblioteca: bibClean, hero: heroData },
+      { biblioteca, hero: heroData },
       { merge: true }
     );
     console.log('✅ config/main salvo');
@@ -505,15 +401,14 @@ async function saveToDB() {
   }
 }
 
-/* ═══════════════════════════════════════════
-   COMPRESSÃO DE IMAGEM
-═══════════════════════════════════════════ */
+/* ═══════════════ COMPRESSÃO ═══════════════ */
 function compressImage(dataURL) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
       const MAX = 1600;
       let w = img.width, h = img.height;
+      // Só reduz se for maior que MAX, nunca aumenta
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
         else       { w = Math.round(w * MAX / h); h = MAX; }
@@ -530,83 +425,16 @@ function compressImage(dataURL) {
   });
 }
 
-/* ═══════════════════════════════════════════
-   UPLOAD MP3 → CLOUDINARY → salva em musicas_mp3/card-{i}
-   Nenhum campo da biblioteca é tocado aqui.
-═══════════════════════════════════════════ */
-async function handleAudio(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const idx = selectedCardIdx;
-  if (idx === null || idx === undefined) { alert('Selecione uma carta primeiro'); return; }
-
-  const statusEl   = document.getElementById('ce-audio-status');
-  const preview    = document.getElementById('ce-audio-preview');
-  const player     = document.getElementById('ce-audio-player');
-  const nameEl     = document.getElementById('ce-audio-name');
-
-  const setStatus = (txt, cor) => {
-    if (statusEl) { statusEl.textContent = txt; statusEl.style.color = cor; }
-    console.log('[Audio]', txt);
-  };
-
-  // Preview local imediato
-  if (preview) preview.style.display = 'block';
-  if (player)  { player.src = URL.createObjectURL(file); }
-  if (nameEl)  nameEl.textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
-  setStatus('⏳ Enviando para Cloudinary...', '#c9a55a');
-
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_PRESET);
-
-    const uploadURL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/video/upload`;
-    console.log('[Audio] POST →', uploadURL, '| preset:', CLOUDINARY_PRESET);
-
-    const res  = await fetch(uploadURL, { method: 'POST', body: formData });
-    const data = await res.json();
-    console.log('[Audio] Resposta HTTP', res.status, '| data:', JSON.stringify(data).slice(0, 300));
-
-    if (data.secure_url) {
-      const audioURL = data.secure_url;
-
-      // Atualiza audioStore (estado local)
-      audioStore[idx] = { url: audioURL, filename: file.name };
-
-      // Salva SOMENTE na coleção "musicas_mp3" — não toca em config/main
-      await db.collection('musicas_mp3').doc('card-' + idx).set({
-        url:      audioURL,
-        filename: file.name,
-        idx:      idx
-      });
-
-      if (player) player.src = audioURL;
-      renderCards();
-      setStatus('✓ MP3 salvo! Abra a carta para ouvir.', '#1DB954');
-      console.log('✅ musicas_mp3/card-' + idx + ' → ' + audioURL);
-    } else {
-      const errMsg = data.error?.message || JSON.stringify(data);
-      setStatus('⚠ Cloudinary: ' + errMsg, '#c0616b');
-    }
-  } catch(err) {
-    setStatus('⚠ Erro de rede: ' + err.message, '#c0616b');
-    console.error('[Audio] Erro:', err);
-  }
-}
-
-/* ═══════════════════════════════════════════
-   UPLOAD FOTO → salva em pictures/card-{i}
-═══════════════════════════════════════════ */
+/* ═══════════════ FOTO — salva em pictures/card-{i} ═══════════════ */
 function handlePhoto(e, idx) {
   if (idx === null || idx === undefined) return;
   const file = e.target.files[0];
   if (!file) return;
 
-  const setStatus = (txt, cor) => {
+  function setStatus(txt, cor) {
     const el = document.getElementById('ce-photo-status');
     if (el) { el.textContent = txt; el.style.color = cor; }
-  };
+  }
   setStatus('⏳ Salvando...', '#c9a55a');
 
   const reader = new FileReader();
@@ -614,11 +442,15 @@ function handlePhoto(e, idx) {
     try {
       const compressed = await compressImage(ev.target.result);
       const sizeKB = Math.round(compressed.length / 1024);
+      console.log('Foto comprimida:', sizeKB, 'KB');
+
       photoStore[idx] = compressed;
 
+      // Preview no painel de edição
       const preview = document.getElementById('ce-photo-preview');
       if (preview) preview.innerHTML = `<img src="${compressed}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="foto"/>`;
 
+      // Atualiza card na página sem re-renderizar tudo
       const photoDiv = document.getElementById('cp-' + idx);
       if (photoDiv) {
         let img = photoDiv.querySelector('img');
@@ -632,40 +464,61 @@ function handlePhoto(e, idx) {
         img.src = compressed;
       }
 
+      // Salva na coleção "pictures"
       await db.collection('pictures').doc('card-' + idx).set({ url: compressed });
       setStatus('✓ Foto salva! (' + sizeKB + ' KB)', '#1DB954');
+      console.log('✅ pictures/card-' + idx + ' salvo');
     } catch(err) {
       setStatus('⚠ ' + (err.code || err.message), '#c0616b');
+      console.error('❌ handlePhoto idx=' + idx + ':', err.code, err.message);
     }
   };
   reader.readAsDataURL(file);
 }
 
-/* ═══════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════ */
+/* ═══════════════ DADOS DEFAULT ═══════════════ */
+const SPG = `<svg viewBox="0 0 24 24"><path fill="white" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>`;
+
+let biblioteca = [
+  {mood:"Saudade",tag:"nostalgia",title:"Quando a distância aperta",quote:"Às vezes a saudade chega antes mesmo de você ir embora.",message:["Eu penso em você nas horas mais inesperadas. No cheiro do café pela manhã, no silêncio que acontece depois do riso — nesses pequenos nadas que agora carregam o teu rosto.","Saudade não é só falta. É amor que não cabe dentro do peito e transborda nos lugares onde você já esteve.","Fechar os olhos e te imaginar perto é quase tão bom quanto ter você aqui. Quase."],signature:"com toda a saudade do mundo",song:"Te Esperando",artist:"Luan Santana",spotify:"https://www.youtube.com/watch?v=ktvTqknDobU"},
+  {mood:"Amor tranquilo",tag:"cotidiano",title:"Amor que não precisa gritar",quote:"O mais bonito não é a paixão que queima — é a que aquece.",message:["Eu gosto de você do jeito quieto. Desse amor que é ficar do lado no silêncio e não precisar dizer nada porque a presença já diz tudo.","Você se tornou o meu lar favorito. Não o lugar — você.","Não preciso de grandes gestos. Só a sua mão na minha e a certeza de que amanhã você ainda vai estar aqui."],signature:"do jeito mais suave que existe",song:"Só Eu Sei",artist:"Jorge & Mateus",spotify:"https://www.youtube.com/watch?v=FDTNpJXCGOk"},
+  {mood:"Paixão",tag:"intensidade",title:"Aquele olhar que desequilibra",quote:"Você tem o poder ridículo de me deixar sem palavras.",message:["Tem horas que eu simplesmente paro e penso: como eu tive a sorte de te encontrar?","Quando você sorri pra mim do jeito que sorri, eu entendo todos os poetas que já escreveram sobre amor.","Não me canso de você. Esse é o resumo de tudo."],signature:"completamente perdido em você",song:"Pupila",artist:"ANAVITÓRIA & Vitor Kley",spotify:"https://www.youtube.com/watch?v=dHIS4QHKRDQ"},
+  {mood:"Boa noite, amor",tag:"intimidade",title:"A melhor hora do dia",quote:"Dormir do seu lado é o sonho que mais gosto de ter acordado.",message:["A noite tem um jeito de deixar tudo mais honesto. Eu só quero saber de você — do seu perfume no travesseiro, do seu respirar quietinho.","Você é minha parte favorita do dia. Não o amanhecer, não o fim da tarde — você.","Boa noite, meu amor."],signature:"até os sonhos te pertencem",song:"Online",artist:"Henrique & Juliano",spotify:"https://www.youtube.com/watch?v=z7nKF6pOr0c"},
+  {mood:"Depois da briga",tag:"reconciliação",title:"Quando o silêncio pesa demais",quote:"Brigar com quem a gente ama é a solidão mais barulhenta que existe.",message:["Eu posso estar errado. Você pode estar errado. Mas o que nenhum de nós dois pode estar é sem o outro.","Brigas passam. Palavras doem e passam. Mas o que sinto por você não passa.","Deixa eu te abraçar. Só deixa o abraço dizer o que as palavras ainda não conseguem."],signature:"teimosamente seu",song:"Cheia de Manias",artist:"Raça Negra",spotify:"https://www.youtube.com/watch?v=YnrE9XQWSBM"},
+  {mood:"Bom dia, meu bem",tag:"manhã",title:"O amanhecer que você merece",quote:"Acordar e saber que você existe já é motivo pro dia ser bom.",message:["Bom dia, você. Que hoje seja leve e a vida te trate com o carinho que você merece.","Pensei em você antes mesmo de abrir os olhos. Essa é a sua culpa, não a minha.","Vai lá enfrentar o dia. Tem alguém aqui torcendo por você."],signature:"já com saudade de você",song:"Vai na Fé",artist:"Vitor Kley",spotify:"https://www.youtube.com/watch?v=ING_IXFnNz8"},
+  {mood:"Distância",tag:"longe demais",title:"Amor que não cabe no mapa",quote:"O que é quilômetro perto da força do que sinto por você?",message:["A distância me ensinou que o amor não cabe em lugar nenhum — ele está nos dois ao mesmo tempo.","Cada mensagem sua é uma janela. Cada ligação, uma visita.","Um dia esse mapa vai ser só memória."],signature:"onde quer que eu esteja, é onde você está",song:"Fica (Ao Vivo)",artist:"ANAVITÓRIA",spotify:"https://www.youtube.com/watch?v=P6l5kyEVniA"},
+  {mood:"Te amo demais",tag:"intenso",title:"Quando não existe palavra suficiente",quote:'"Te amo" é bonito, mas é pequeno demais pro que eu sinto.',message:["Tem horas que o te amo não cabe. Precisaria de uma palavra nova.","Você entrou na minha vida como quem não quer nada e ficou como quem é dono do lugar.","Então: te amo. E o resto eu passo o resto da vida tentando te mostrar."],signature:"com um amor que ainda não tem nome",song:"Pra Sempre Com Você",artist:"Jorge & Mateus",spotify:"https://www.youtube.com/watch?v=YnJ5MsLBnGo"},
+  {mood:"Para sempre",tag:"compromisso",title:"O futuro que eu escolhi",quote:"Eu me decido por você todos os dias. Sem hesitar.",message:["Para sempre não é uma promessa de eternidade — é uma escolha que eu renovo toda manhã.","Eu quero envelhecer com você. Quero as histórias que a gente vai contar mil vezes.","Não tenho medo do tempo. Tenho você."],signature:"para sempre, e que seja verdade",song:"Para Sempre Comigo",artist:"Chitãozinho & Xororó",spotify:"https://www.youtube.com/watch?v=ACtF_cMCYSQ"},
+  {mood:"Ciúme delicioso",tag:"carinhoso",title:"Quando eu quero você só pra mim",quote:"Tem um ciúme que não machuca — só lembra o quanto importa.",message:["Eu fico com ciúme, tá? Mas não do jeito feio. Do jeito que lembra que você é especial.","Eu gosto de saber que você é meu. Meu no sentido bom — o de escolha, não de posse.","Pode falar pra todo mundo que é meu."],signature:"possessivamente carinhoso",song:"Meu Pedaço de Pecado",artist:"João Gomes",spotify:"https://www.youtube.com/watch?v=CuMlnLNhLdE"},
+  {mood:"Gratidão",tag:"amor pleno",title:"Obrigado por existir",quote:"Você não sabe o que fez com a minha vida só por aparecer nela.",message:["Antes de você, eu não sabia que o amor podia ser assim — leve e intenso ao mesmo tempo.","Obrigado pelos dias bons e pelos ruins também.","Eu não quero imaginar como seria sem você."],signature:"eternamente grato por você",song:"Saudade de Minha Terra",artist:"Michel Teló & Gusttavo Lima",spotify:"https://www.youtube.com/watch?v=Fkq7OJbvA3s"},
+  {mood:"Quando tudo é você",tag:"devoção",title:"Você virou o meu hábito favorito",quote:"Toda música boa me lembra de você. Toda coisa bonita também.",message:["Você virou filtro. Passa tudo por você antes de eu sentir.","Não é dependência. É cumplicidade. É ter alguém com quem dividir as coisas boas.","Continue sendo o meu hábito favorito."],signature:"viciado em você do jeito certo",song:"Saudade Sua",artist:"Gusttavo Lima",spotify:"https://www.youtube.com/watch?v=p5WlZHHEqI4"}
+];
+
+let heroData = {
+  title:"Nossa<br>Biblioteca", names:"Eychila & Matheus",
+  eyebrow:"✦  uma coleção para dois  ✦",
+  desc:"Escolha um estado de alma. Veja a foto de vocês. Leia a carta. Deixe a música te levar."
+};
+
+const photoStore = {};
+let selectedCardIdx = null;
+
+/* ═══════════════ SPOTIFY ═══════════════ */
 function showToast(item) {
   document.getElementById('toast-song').textContent = item.song + ' — ' + item.artist;
   document.getElementById('music-toast').classList.add('show');
 }
 function closeToast() { document.getElementById('music-toast').classList.remove('show'); }
 
-/* ═══════════════════════════════════════════
-   RENDER CARDS
-═══════════════════════════════════════════ */
-const NOTE_SVG = `<svg viewBox="0 0 24 24" width="11" height="11"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`;
-
+/* ═══════════════ RENDER CARDS ═══════════════ */
 function renderCards() {
   const grid = document.getElementById('cards-grid');
   grid.innerHTML = '';
   biblioteca.forEach((item, i) => {
-    const card  = document.createElement('div');
+    const card = document.createElement('div');
     card.className = 'card fade-in';
     card.style.transitionDelay = (i * 0.05) + 's';
-
-    const photo    = photoStore[i];
-    const hasAudio = !!(audioStore[i] && audioStore[i].url);
-
+    const photo = photoStore[i];
     card.innerHTML = `
       <div class="card-photo" id="cp-${i}">
         ${photo
@@ -679,16 +532,15 @@ function renderCards() {
         <h3 class="card-title">${item.title}</h3>
         <p class="card-quote">${item.quote}</p>
         <div class="card-song">
-          ${hasAudio
-            ? `<div class="card-song-icon">${NOTE_SVG}</div>
-               <div style="flex:1;min-width:0;">
-                 <div class="card-song-name">${item.song}</div>
-                 <div class="card-song-artist">${item.artist}</div>
-               </div>`
-            : `<div style="flex:1;min-width:0;">
-                 <div class="card-song-name" style="opacity:.5;">${item.song}</div>
-                 <div class="card-song-artist">${item.artist}</div>
-               </div>`}
+          <div class="card-song-icon" style="background:${(item.spotify||'').includes('youtu')?'#FF0000':'#1DB954'};">
+            ${(item.spotify||'').includes('youtu')
+              ? `<svg viewBox="0 0 24 24" width="11" height="11" fill="white"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>`
+              : SPG}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="card-song-name">${item.song}</div>
+            <div class="card-song-artist">${item.artist}</div>
+          </div>
         </div>
         <button class="card-action" onclick="openModal(${i})">Ler a carta →</button>
       </div>`;
@@ -697,70 +549,79 @@ function renderCards() {
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 }
 
-/* ═══════════════════════════════════════════
-   MODAL — player de áudio robusto iOS/Android
-   Estratégia:
-   - Cria elemento <audio> dinamicamente
-   - Tenta play() programático (funciona no Android)
-   - No iOS, exibe controles nativos (usuário toca)
-   - Botão "▶ Tocar música" como fallback universal
-═══════════════════════════════════════════ */
-let currentAudio = null; // referência global para parar ao fechar modal
+/* ═══════════════ MODAL ═══════════════ */
+function getYouTubeID(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('?')[0];
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v') || null;
+  } catch(e) {}
+  return null;
+}
 
 function openModal(idx) {
   const item  = biblioteca[idx];
   const photo = photoStore[idx];
-  const audio = audioStore[idx]; // { url, filename } ou undefined
+  const link  = (item.spotify || '').trim();
+  const ytID  = getYouTubeID(link);
+  const isSp  = !ytID && link.includes('spotify.com');
 
-  // Para áudio anterior se existir
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-
+  // ── Player minimalista ──
+  // YouTube: iframe invisível (só áudio, controls ocultos) + barra de info
+  // Spotify: sem autoplay garantido, só botão
   let playerHTML = '';
-
-  if (audio && audio.url) {
-    // Player com controles nativos — funciona em iOS, Android, Desktop
+  if (ytID) {
+    // Iframe do YouTube — height=0 visualmente, mas o áudio toca
+    // A barra bonita fica em cima, o iframe fica colapsado
     playerHTML = `
-      <div class="music-player" id="modal-player-${idx}">
-        <div class="music-player-header">
-          <div class="music-vinyl spinning" id="vinyl-${idx}">${NOTE_SVG}</div>
-          <div class="music-info">
-            <div class="music-label">♪ nossa música</div>
-            <div class="music-song">${item.song}</div>
-            <div class="music-artist">${item.artist}</div>
+      <div style="margin-top:1.2rem;">
+        <!-- Player visual minimalista -->
+        <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.2);border-radius:2px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#FF0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:spin 3s linear infinite;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
           </div>
-        </div>
-        <audio
-          id="modal-audio-${idx}"
-          class="music-audio"
-          controls
-          preload="none"
-          playsinline
-          webkit-playsinline
-          x-webkit-airplay="allow"
-          style="width:100%;height:40px;display:block;border-radius:2px;">
-          <source src="${audio.url}" type="audio/mpeg">
-        </audio>
-        <button class="music-play-btn" id="play-btn-${idx}" onclick="triggerPlay(${idx})">
-          ▶ &nbsp;Tocar música
-        </button>
-      </div>`;
-  } else {
-    // Sem MP3: apenas exibe nome da música
-    playerHTML = `
-      <div class="music-player">
-        <div class="music-player-header">
-          <div class="music-vinyl">${NOTE_SVG}</div>
-          <div class="music-info">
-            <div class="music-label">♪ nossa música</div>
-            <div class="music-song">${item.song}</div>
-            <div class="music-artist">${item.artist}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,0,0,.7);margin-bottom:2px;">♪ tocando agora</div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+            <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
           </div>
+          <a href="${link}" target="_blank" rel="noopener" style="color:rgba(255,0,0,.6);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
         </div>
-        <p class="music-no-audio">Adicione o MP3 desta música no painel de edição ✦</p>
+        <!-- iframe colapsado — toca o áudio -->
+        <iframe
+          src="https://www.youtube.com/embed/${ytID}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1"
+          width="0" height="0"
+          frameborder="0"
+          allow="autoplay; encrypted-media"
+          style="position:absolute;opacity:0;pointer-events:none;">
+        </iframe>
       </div>`;
+  } else if (isSp) {
+    try {
+      const u = new URL(link);
+      if (/^\/(track|album|playlist)\/\w+/.test(u.pathname)) {
+        playerHTML = `
+          <div style="margin-top:1.2rem;">
+            <div style="display:flex;align-items:center;gap:12px;padding:.9rem 1rem;background:rgba(29,185,84,.06);border:1px solid rgba(29,185,84,.2);border-radius:2px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#1DB954;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(29,185,84,.8);margin-bottom:2px;">Spotify</div>
+                <div style="font-size:.88rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.song}</div>
+                <div style="font-size:.72rem;color:var(--muted);">${item.artist}</div>
+              </div>
+              <a href="${link}" target="_blank" rel="noopener" style="color:rgba(29,185,84,.8);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;flex-shrink:0;">abrir ↗</a>
+            </div>
+            <iframe
+              src="https://open.spotify.com/embed${u.pathname}?autoplay=1&utm_source=generator&theme=0"
+              width="100%" height="80" frameborder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              style="display:block;border:none;border-radius:2px;margin-top:.5rem;">
+            </iframe>
+          </div>`;
+      }
+    } catch(e) {}
   }
 
   document.getElementById('modal-inner').innerHTML = `
@@ -783,63 +644,9 @@ function openModal(idx) {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   showToast(item);
-
-  // Tenta play automático (funciona no Android/Desktop, iOS ignora silenciosamente)
-  if (audio && audio.url) {
-    const audioEl = document.getElementById('modal-audio-' + idx);
-    if (audioEl) {
-      currentAudio = audioEl;
-      // Pequeno delay para o DOM terminar de renderizar
-      setTimeout(() => {
-        audioEl.play()
-          .then(() => {
-            // Autoplay funcionou — esconde o botão manual
-            const btn = document.getElementById('play-btn-' + idx);
-            if (btn) btn.style.display = 'none';
-            startVinyl(idx);
-          })
-          .catch(() => {
-            // Autoplay bloqueado (iOS) — mantém botão e controles nativos visíveis
-            console.log('[Audio] Autoplay bloqueado — controles nativos disponíveis');
-          });
-      }, 250);
-
-      // Eventos do player nativo
-      audioEl.addEventListener('play',  () => startVinyl(idx));
-      audioEl.addEventListener('pause', () => stopVinyl(idx));
-      audioEl.addEventListener('ended', () => stopVinyl(idx));
-    }
-  }
-}
-
-function triggerPlay(idx) {
-  const audioEl = document.getElementById('modal-audio-' + idx);
-  if (!audioEl) return;
-  audioEl.play()
-    .then(() => {
-      const btn = document.getElementById('play-btn-' + idx);
-      if (btn) btn.style.display = 'none';
-      startVinyl(idx);
-    })
-    .catch(err => console.warn('[Audio] triggerPlay falhou:', err));
-}
-
-function startVinyl(idx) {
-  const v = document.getElementById('vinyl-' + idx);
-  if (v) v.classList.add('spinning');
-}
-function stopVinyl(idx) {
-  const v = document.getElementById('vinyl-' + idx);
-  if (v) v.classList.remove('spinning');
 }
 
 function closeModal() {
-  // Para o áudio ao fechar
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.src = ''; // libera recurso no iOS
-    currentAudio = null;
-  }
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
   document.getElementById('modal-inner').innerHTML = '';
@@ -849,14 +656,11 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
 let _ty = 0;
 document.getElementById('modal-box').addEventListener('touchstart', e => { _ty = e.touches[0].clientY; }, {passive:true});
-document.getElementById('modal-box').addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - _ty > 80) closeModal(); }, {passive:true});
+document.getElementById('modal-box').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - _ty > 80) closeModal(); }, {passive:true});
 
-/* ═══════════════════════════════════════════
-   HERO DOM
-═══════════════════════════════════════════ */
+/* ═══════════════ HERO DOM ═══════════════ */
 function applyHeroToDOM() {
   document.getElementById('hero-title').innerHTML   = heroData.title;
   document.getElementById('hero-names').innerHTML   = heroData.names;
@@ -864,9 +668,7 @@ function applyHeroToDOM() {
   document.getElementById('hero-desc').textContent  = heroData.desc;
 }
 
-/* ═══════════════════════════════════════════
-   PIN
-═══════════════════════════════════════════ */
+/* ═══════════════ PIN ═══════════════ */
 const CORRECT_PIN = '1205';
 let pinBuffer = '';
 let pinUnlocked = false;
@@ -882,7 +684,7 @@ function pedirPIN() {
 
 function pinKey(k) {
   if (k === 'cancel') { document.getElementById('pin-overlay').classList.remove('open'); document.body.style.overflow = ''; return; }
-  if (k === 'del')    { pinBuffer = pinBuffer.slice(0,-1); updateDots(); return; }
+  if (k === 'del') { pinBuffer = pinBuffer.slice(0,-1); updateDots(); return; }
   if (pinBuffer.length >= 4) return;
   pinBuffer += k;
   updateDots();
@@ -897,25 +699,21 @@ function pinKey(k) {
         document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
         const dots = document.getElementById('pin-dots');
         dots.style.animation = 'shake .35s ease';
-        setTimeout(() => {
-          pinBuffer = ''; updateDots();
-          document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
-          dots.style.animation = '';
-        }, 500);
+        setTimeout(() => { pinBuffer = ''; updateDots(); document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error')); dots.style.animation = ''; }, 500);
       }
     }, 120);
   }
 }
 
 function updateDots() {
-  for (let i = 0; i < 4; i++)
-    document.getElementById('pd' + i).classList.toggle('filled', i < pinBuffer.length);
+  for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
 }
 
 function abrirEditor() {
   const p = document.getElementById('edit-panel');
   p.classList.add('open');
-  document.getElementById('e-title').value   = heroData.title.replace(/<br>/g, '\n');
+  // Preenche campos da tab hero (caso o usuário navegue lá)
+  document.getElementById('e-title').value   = heroData.title.replace(/<br>/g,'\n');
   document.getElementById('e-names').value   = heroData.names;
   document.getElementById('e-eyebrow').value = heroData.eyebrow;
   document.getElementById('e-desc').value    = heroData.desc;
@@ -925,23 +723,21 @@ function abrirEditor() {
   document.querySelectorAll('.edit-tab-content').forEach(t => t.classList.remove('active'));
   document.querySelector('.edit-tab:nth-child(2)').classList.add('active');
   document.getElementById('tab-cards').classList.add('active');
-  setTimeout(() => p.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+  setTimeout(() => p.scrollIntoView({behavior:'smooth',block:'start'}), 100);
 }
 
 function fecharEditor() { document.getElementById('edit-panel').classList.remove('open'); }
 
-/* ═══════════════════════════════════════════
-   EDITOR
-═══════════════════════════════════════════ */
+/* ═══════════════ EDITOR ═══════════════ */
 function switchTab(id, btn) {
-  document.querySelectorAll('.edit-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.edit-tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.edit-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.edit-tab-content').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(id).classList.add('active');
 }
 
 function saveHero() {
-  heroData.title   = document.getElementById('e-title').value.replace(/\n/g, '<br>');
+  heroData.title   = document.getElementById('e-title').value.replace(/\n/g,'<br>');
   heroData.names   = document.getElementById('e-names').value;
   heroData.eyebrow = document.getElementById('e-eyebrow').value;
   heroData.desc    = document.getElementById('e-desc').value;
@@ -953,9 +749,9 @@ function saveHero() {
 function buildCardSelector() {
   const sel = document.getElementById('card-selector');
   sel.innerHTML = '';
-  biblioteca.forEach((item, i) => {
+  biblioteca.forEach((item,i) => {
     const btn = document.createElement('button');
-    btn.className = 'card-sel-btn' + (selectedCardIdx === i ? ' selected' : '');
+    btn.className = 'card-sel-btn' + (selectedCardIdx===i?' selected':'');
     btn.textContent = item.mood;
     btn.onclick = () => selectCard(i);
     sel.appendChild(btn);
@@ -966,50 +762,35 @@ function selectCard(idx) {
   selectedCardIdx = idx;
   buildCardSelector();
   const item = biblioteca[idx];
-
   document.getElementById('ce-mood').value      = item.mood;
-  document.getElementById('ce-tag').value        = item.tag;
-  document.getElementById('ce-title').value      = item.title;
-  document.getElementById('ce-quote').value      = item.quote;
-  document.getElementById('ce-signature').value  = item.signature;
-  document.getElementById('ce-song').value       = item.song;
-  document.getElementById('ce-artist').value     = item.artist;
-
-  // Parágrafos
+  document.getElementById('ce-tag').value       = item.tag;
+  document.getElementById('ce-title').value     = item.title;
+  document.getElementById('ce-quote').value     = item.quote;
+  document.getElementById('ce-signature').value = item.signature;
+  document.getElementById('ce-song').value      = item.song;
+  document.getElementById('ce-artist').value    = item.artist;
+  document.getElementById('ce-spotify').value   = item.spotify;
   const c = document.getElementById('ce-messages');
   c.innerHTML = '';
   item.message.forEach(m => addMsgField(m));
 
-  // Foto
+  // Mostra foto atual no preview do painel
   const preview = document.getElementById('ce-photo-preview');
-  const pStatus  = document.getElementById('ce-photo-status');
+  const status  = document.getElementById('ce-photo-status');
   if (preview) {
-    preview.innerHTML = photoStore[idx]
-      ? `<img src="${photoStore[idx]}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="foto"/>`
-      : `<span style="font-size:.78rem;font-style:italic;color:rgba(245,237,224,.3);">Nenhuma foto</span>`;
+    if (photoStore[idx]) {
+      preview.innerHTML = `<img src="${photoStore[idx]}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="foto"/>`;
+    } else {
+      preview.innerHTML = `<span style="font-size:.78rem;font-style:italic;color:rgba(245,237,224,.3);">Nenhuma foto</span>`;
+    }
   }
-  if (pStatus) pStatus.textContent = '';
-
-  // Áudio MP3
-  const audioPreview = document.getElementById('ce-audio-preview');
-  const audioPlayer  = document.getElementById('ce-audio-player');
-  const audioName    = document.getElementById('ce-audio-name');
-  const audioStatus  = document.getElementById('ce-audio-status');
-  if (audioStatus) audioStatus.textContent = '';
-
-  if (audioStore[idx] && audioStore[idx].url) {
-    if (audioPreview) audioPreview.style.display = 'block';
-    if (audioPlayer)  audioPlayer.src = audioStore[idx].url;
-    if (audioName)    audioName.textContent = audioStore[idx].filename || 'MP3 salvo';
-  } else {
-    if (audioPreview) { audioPreview.style.display = 'none'; if (audioPlayer) audioPlayer.src = ''; }
-  }
+  if (status) status.textContent = '';
 
   document.getElementById('card-edit-form').style.display = 'block';
-  setTimeout(() => document.getElementById('card-edit-form').scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+  setTimeout(() => document.getElementById('card-edit-form').scrollIntoView({behavior:'smooth',block:'start'}), 100);
 }
 
-function addMsgField(val = '') {
+function addMsgField(val='') {
   const c = document.getElementById('ce-messages');
   const row = document.createElement('div');
   row.className = 'edit-msg-row';
@@ -1017,22 +798,31 @@ function addMsgField(val = '') {
   c.appendChild(row);
 }
 
-function saveCard() {
+async function saveCard() {
   if (selectedCardIdx === null) return;
-  // Salva APENAS campos de texto — áudio fica em audioStore e musicas_mp3
+  const musicLink = document.getElementById('ce-spotify').value.trim();
   biblioteca[selectedCardIdx] = {
     mood:      document.getElementById('ce-mood').value,
     tag:       document.getElementById('ce-tag').value,
     title:     document.getElementById('ce-title').value,
     quote:     document.getElementById('ce-quote').value,
-    message:   Array.from(document.querySelectorAll('#ce-messages .edit-textarea')).map(t => t.value.trim()).filter(Boolean),
+    message:   Array.from(document.querySelectorAll('#ce-messages .edit-textarea')).map(t=>t.value.trim()).filter(Boolean),
     signature: document.getElementById('ce-signature').value,
     song:      document.getElementById('ce-song').value,
-    artist:    document.getElementById('ce-artist').value
+    artist:    document.getElementById('ce-artist').value,
+    spotify:   musicLink
   };
   renderCards();
   buildCardSelector();
+  // Salva dados na coleção config/main
   saveToDB();
+  // Salva link da música em coleção separada "musicas"
+  if (musicLink) {
+    try {
+      await db.collection('musicas').doc('card-' + selectedCardIdx).set({ link: musicLink });
+      console.log('Musica salva: musicas/card-' + selectedCardIdx);
+    } catch(e) { console.error('Erro salvar musica:', e.message); }
+  }
   showSaved('card-saved');
 }
 
@@ -1042,9 +832,7 @@ function showSaved(id) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-/* ═══════════════════════════════════════════
-   QR CODE
-═══════════════════════════════════════════ */
+/* ═══════════════ QR CODE ═══════════════ */
 function gerarQR() {
   const url = document.getElementById('qr-url').value.trim();
   if (!url) { alert('Cole um link primeiro!'); return; }
@@ -1053,28 +841,24 @@ function gerarQR() {
   catch(e) { alert('Link inválido.'); return; }
   setTimeout(() => {
     const canvas = document.getElementById('qr-canvas');
-    const src    = tmp.querySelector('canvas') || tmp.querySelector('img');
-    const ctx    = canvas.getContext('2d');
-    const done   = () => { document.getElementById('qr-dl').href = canvas.toDataURL('image/png'); };
-    if (src && src.tagName === 'CANVAS') { canvas.width = src.width; canvas.height = src.height; ctx.drawImage(src, 0, 0); done(); }
-    else if (src) { const img = new Image(); img.onload = () => { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); done(); }; img.src = src.src; }
+    const src = tmp.querySelector('canvas') || tmp.querySelector('img');
+    const ctx = canvas.getContext('2d');
+    const done = () => { document.getElementById('qr-dl').href = canvas.toDataURL('image/png'); };
+    if (src && src.tagName==='CANVAS') { canvas.width=src.width; canvas.height=src.height; ctx.drawImage(src,0,0); done(); }
+    else if (src) { const img=new Image(); img.onload=()=>{ canvas.width=img.width; canvas.height=img.height; ctx.drawImage(img,0,0); done(); }; img.src=src.src; }
   }, 300);
-  document.getElementById('qr-hint').textContent = url.length > 55 ? url.slice(0, 52) + '…' : url;
+  document.getElementById('qr-hint').textContent = url.length>55?url.slice(0,52)+'…':url;
   document.getElementById('qr-result').classList.add('show');
-  document.getElementById('qr-result').scrollIntoView({ behavior:'smooth', block:'center' });
+  document.getElementById('qr-result').scrollIntoView({behavior:'smooth',block:'center'});
 }
-document.getElementById('qr-url').addEventListener('keydown', e => { if (e.key === 'Enter') gerarQR(); });
+document.getElementById('qr-url').addEventListener('keydown', e => { if(e.key==='Enter') gerarQR(); });
 
-/* ═══════════════════════════════════════════
-   SCROLL OBSERVER
-═══════════════════════════════════════════ */
+/* ═══════════════ SCROLL OBSERVER ═══════════════ */
 const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.06 });
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:0.06});
 
-/* ═══════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════ */
+/* ═══════════════ INIT ═══════════════ */
 renderCards();
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 loadFromDB();
